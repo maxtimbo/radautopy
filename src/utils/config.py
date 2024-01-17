@@ -50,6 +50,26 @@ class FileMap:
     }
 
 
+class ConfigJSON:
+    def __init__(self, config_file: pathlib.Path) -> None:
+        self.config_file = config_file
+
+    def _parse_json(self) -> dict:
+        try:
+            with open(self.config_file, 'r') as f:
+                config = json.load(f)
+            return config
+        except Exception as e:
+            logger.exception(e)
+
+    def create_config(self, config_dict: dict):
+        print(sonfig_dict)
+
+    #def save_config(self) -> None:
+    #    try:
+    #        with open(self.config_file, 'w') as f:
+
+
 class RadConfig:
     def __init__(self, config_dict: dict, config_file: pathlib.Path) -> None:
         self.config_dict = config_dict

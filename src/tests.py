@@ -1,18 +1,30 @@
 #from radauto_mail import RadMail
 from pathlib import Path
-from utils.cmdlts import BaseArgs
+import defaults
 import radftp.defaults
+from utils.config import ConfigJSON
 
-def runner(blah:str, blah2: int):
-    print('runner')
-    print(blah)
-    print(blah2)
+config = radftp.defaults.DEFAULT_CONFIG | defaults.DEFAULT_CONFIG | defaults.DEFAULT_FILEMAP
 
-def validate():
-    print('validate')
+print(config)
+for key, value in config.items():
+    print(key)
 
-test = BaseArgs(radftp.defaults.args_dict, runner, validate, blah="test", blah2=45)
-print(test.email)
+
+
+#from utils.cmdlts import BaseArgs
+#import radftp.defaults
+#
+#def runner(blah:str, blah2: int):
+#    print('runner')
+#    print(blah)
+#    print(blah2)
+#
+#def validate():
+#    print('validate')
+#
+#test = BaseArgs(radftp.defaults.args_dict, runner, validate, blah="test", blah2=45)
+#print(test.email)
 #import defaults
 #from utils.config import RadConfig
 #

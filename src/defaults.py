@@ -25,11 +25,13 @@ DEFAULT_CONFIG = {
     }
 }
 
-DEFAULT_FILE_MAP = [
-    {
-        "input_file": "input.mp3",
-        "output_file": "output.wav",
-        "artist": "artist",
-        "title": "title"
-    }
-]
+DEFAULT_FILEMAP = {
+    "filemap": [
+        {
+            "input_file": "input.mp3",
+            "output_file": "output.wav",
+            "artist": "artist",
+            "title": "title"
+        }
+    ]
+}
