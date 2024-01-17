@@ -1,0 +1,67 @@
+<tpr> UwU_maxtim_UwU: some potential improvement ideas: 1) use pathlib instead of os.path* 2) use string.Template or some other templating instead of manually doing html 3) use contextmanager instead of manually managing resources (e.g., with SMTP_SSL(...)) 4) your inputs (sender, subject, ..) could be stored inside a dataclass for nicer interface
+<tpr> UwU_maxtim_UwU: for example, pathlib has with_suffix change the extension: https://docs.python.org/3/library/pathlib.html#pathlib.PurePath.with_suffix
+
+<tpr> UwU_maxtim_UwU: also, instead of using logger.critical for not yet implemented functionality, you could simply raise NotImplementedError("something is not implemented") at the end of the method (instead of hiding it behind an else)
+<UwU_maxtim_UwU> tpr, oh I didn't know that was a thing
+<tpr> UwU_maxtim_UwU: I'd go for probably for a dataclass, and implement (some) functionality inside of it. it could be that you won't want to have a sending functionality inside of it, but you could implement something like 'prepare()' which constructs the complete MIMEMultiPart() and returns it
+
+# Instead of this which may leave the connection open (e.g., if an exception is thrown)
+
+try:
+    server = smtplib.SMTP_SSL('smpt.gmail.com', 465)
+    server.ehlo()
+    server.login(self.username, self.password)
+
+
+    server.sendmail(sender, recipient, msg.as_string())
+
+    server.close()
+except Exception as e:
+    error = traceback.format_exc()
+    logging.error(error)
+    logging.error(e)
+    
+
+# You could do this, the context manager ("with ..") will close the connection automatically when it exists, *no matter* if an error has happened
+# Note also the usage of `logging.exception()`
+    
+try:
+    with smtplib.SMPT_SSL(...) as smtp:
+        smtp.ehlo()
+        smtp.login(...)
+        smtp.sendmail(msg.sender, msg.recipient, msg.prepare().as_string())
+except Exception as ex:
+    logging.exception(ex)
+
+
+
+https://stackoverflow.com/questions/63754359/correct-way-to-mock-patch-smtplib-smtp
+
+
+# Instead of this
+    
+def mp3_attachment(self, directory, filename):
+    if filename.endswith('.wav'):
+        mp3 = f"{os.path.splitext(filename)[0]}.mp3"
+        convert = subprocess.Popen(f"ffmpeg -y -i {directory}/{filename} -acodec libmp3lame {directory}/{mp3}".split(), stderr=subprocess.DEVNULL)
+        convert.wait()
+        return f"{directory}/{mp3}"
+    elif filename.endswith('.mp3'):
+        return f"{directory}/{filename}"
+    else:
+        logging.critical(f"I don't have anything written for this yet... {filename}")
+
+
+# We could flatten it and use pathlib
+        
+def mp3_attachment(self, input_file: pathlib.Path):
+    output_file = input_file.with_suffix(".mp3")
+    # TODO: error reporting?
+    # TODO: worth checking out subprocess.run() works here
+    convert = subprocess.Popen(f"ffmpeg -y -i {str(input_file}) -acodec libmp3lame {directory}/{mp3}".split(), stderr=subprocess.DEVNULL)
+    convert.wait()
+    
+    return output_file
+
+
+
