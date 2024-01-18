@@ -26,6 +26,30 @@
             "output_file": "output.wav",
             "artist": "artist",
             "title": "title"
+        },
+        {
+            "input_file": "sdfg",
+            "output_file": "sdfg",
+            "artist": "sdfg",
+            "title": "sdfg"
+        },
+        {
+            "input_file": "asdf",
+            "output_file": "rfrfrf",
+            "artist": "dfgdfgd",
+            "title": "fghd"
+        },
+        {
+            "input_file": "Input{week}.mp3",
+            "output_file": "SY31234.wav",
+            "artist": "Title",
+            "title": "Title {now}"
+        },
+        {
+            "input_file": "Input{week}.mp3",
+            "output_file": "SY31234.wav",
+            "artist": "Title",
+            "title": "Title {now}"
         }
     ]
 }

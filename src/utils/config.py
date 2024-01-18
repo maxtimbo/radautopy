@@ -6,6 +6,8 @@ import logging
 import pathlib
 
 from functools import partial
+from tabulate import tabulate
+
 from utils.cmdlts import make_dirs
 
 
@@ -82,6 +84,35 @@ class ConfigJSON:
         except Exception as e:
             logger.exception(e)
 
+    def set_filemap(self) -> None:
+        print(f"You are now setting up the filemap for {self.config_file}")
+        print("Available variables are:")
+        replacements = [[ph, func(placeholder=ph, original=ph)] for ph, func in self._replacement_functions.items()]
+        print(tabulate(replacements, headers=['Variable', 'Example Output'], tablefmt="simple_outline"))
+        print("\nUse these variables to create search patterns or replacement patterns.")
+        print(f"For example: `input {{week}}{{year}}.mp3` would become `input {self.week}{self.year}.mp3`\n")
+
+        for track in self.config_dict['filemap']:
+            track = self.set_track(track)
+
+        self._next_continue(track)
+        self.save_config()
+
+    def _next_continue(self, track: dict):
+        cond = click.prompt('(C)reate a new track, (D)uplicate the last track, or (Q)uit?',
+                            type=click.Choice(['c', 'd', 'q'], case_sensitive=False),
+                            default='q')
+        if 'c' in cond:
+            track = self.set_track({k:"" for k, v in self.config_dict['filemap'][0].items()})
+            print(track)
+            self.config_dict['filemap'].append(track)
+            self._next_continue(track)
+        elif 'd' in cond:
+            track = self.set_track(track)
+            print(track)
+            self.config_dict['filemap'].append(track)
+            self._next_continue(track)
+
     def set_interactive(self, config_dict: dict):
         self.config_dict = config_dict
         print(f"You are now setting the values of {self.config_file}")
@@ -136,6 +167,18 @@ class ConfigJSON:
             else:
                 setattr(self, 'filemap', self.config_dict['filemap'])
                 logger.debug(f"setting attr filemap: {self.config_dict['filemap']}")
+
+    @staticmethod
+    def set_track(track: dict) -> dict:
+        print(tabulate([[key, value] for key, value in track.items()], tablefmt="simple_outline"))
+        for k, v in track.items():
+            track[k] = click.prompt(f'{k}: ', default=track[k])
+
+        print(tabulate([[key, value] for key, value in track.items()], tablefmt="simple_outline"))
+        if not click.confirm('Is this correct?', default='y'):
+            ConfigJSON.set_track(track)
+
+        return track
 
     @staticmethod
     def _replace_placeholder(original: str, placeholder: str, value: str) -> str:
