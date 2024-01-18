@@ -22,7 +22,7 @@ def make_dirs(path: pathlib.Path | str):
 
 
 def BaseArgs(varis: dict, runner_args: list[tuple] = None) -> argparse.ArgumentParser:
-    helptext = varis['description'] + "\nCreate a new config file by using the new_config option. Config files are stored in ~/.config/radautopy by default"
+    helptext = varis['description'] + "\nCreate a new config file by using the edit_config option. Config files are stored in ~/.config/radautopy by default."
     parser = argparse.ArgumentParser(prog=varis['prog'], description=helptext)
     group = parser.add_mutually_exclusive_group()
     subparsers = parser.add_subparsers(dest='subparser')
@@ -35,6 +35,7 @@ def BaseArgs(varis: dict, runner_args: list[tuple] = None) -> argparse.ArgumentP
 
     run = subparsers.add_parser('run')
     run.add_argument('-e', '--email', help='email output', action='store_true')
+    run.add_argument('-d', '--dry_run', help='dry run; emails will not be sent, files will not be downloaded.', action='store_true')
     if runner_args is not None:
         for arg in runner_args:
             run.add_argument(*arg[:-1], **arg[-1])
@@ -43,5 +44,10 @@ def BaseArgs(varis: dict, runner_args: list[tuple] = None) -> argparse.ArgumentP
     validate.add_argument('-e', '--email', help='validate and test email settings', action='store_true')
 
     args = parser.parse_args()
+
+    if args.subparser == 'validate':
+        raise NotImplementedError('Validation has not yet been implemented.')
+        if args.email:
+            raise NotImplementedError('Validation has not yet been implemented')
 
     return args

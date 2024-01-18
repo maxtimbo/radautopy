@@ -3,12 +3,20 @@ from pathlib import Path
 import defaults
 import radftp.defaults
 from utils.config import ConfigJSON
+from time import sleep
 
-config = radftp.defaults.DEFAULT_CONFIG | defaults.DEFAULT_CONFIG | defaults.DEFAULT_FILEMAP
+#config = radftp.defaults.DEFAULT_CONFIG | defaults.DEFAULT_CONFIG | defaults.DEFAULT_FILEMAP
+#
+#confile = Path('test.json')
+#conf = ConfigJSON(confile, config)
 
-print(config)
-for key, value in config.items():
-    print(key)
+somebool = True
+
+sleep(10) if somebool else print('false')
+
+#   print(config)
+#   for key, value in config.items():
+#       print(key)
 
 
 

@@ -1,0 +1,31 @@
+{
+    "FTP": {
+        "ftp_server": "<class 'str'>",
+        "ftp_username": "<class 'str'>",
+        "ftp_password": "<class 'str'>",
+        "ftp_pasv": "True",
+        "ftp_dir": "",
+        "ftp_files": ""
+    },
+    "email": {
+        "email_server": "smtp.example",
+        "email_port": "465",
+        "email_user": "EMAILUSER",
+        "email_passwd": "EMAILPASS",
+        "email_reply": "example@domain",
+        "email_recipient": "example@domain"
+    },
+    "dirs": {
+        "download_dir": "/home/tfinley/radautopy/download",
+        "export_dir": "/home/tfinley/radautopy/export",
+        "audio_tmp": "/home/tfinley/radautopy/audio_tmp"
+    },
+    "filemap": [
+        {
+            "input_file": "input.mp3",
+            "output_file": "output.wav",
+            "artist": "artist",
+            "title": "title"
+        }
+    ]
+}
