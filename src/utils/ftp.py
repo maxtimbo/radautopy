@@ -20,19 +20,24 @@ class RadFTP:
                 self.ftp.cwd(self.directory)
             return function(*args, **kwargs)
 
-    def list_remote(self) -> list:
-        files = []
+    def list_remote(self, filename: str = None) -> list:
+        files = [] if filname is not None else ""
         try:
-            files += self.ftp.nlst()
+            if filename is not None:
+                files = self.ftp.nlst(filename)
+            else:
+                files += self.ftp.nlst()
         except ftplib.error_perm as resp:
             if str(resp) == '550 No files found':
                 logger.critical("No files in this directory")
             else:
                 raise
-        files = list(filter(None, files))
 
-        for f in files:
-            logger.debug(f)
+        if filename is None:
+            files = list(filter(None, files))
+
+            for f in files:
+                logger.debug(f)
 
         return files
 

@@ -11,12 +11,12 @@ DEFAULT_AUDIO_TMP = pathlib.Path(DEFAULT_ROOT_DIR, "audio_tmp")
 
 DEFAULT_CONFIG = {
     "email": {
-        "email_server": "smtp.example",
-        "email_port": 465,
-        "email_user": "EMAILUSER",
-        "email_passwd": "EMAILPASS",
-        "email_reply": "example@domain",
-        "email_recipient": "example@domain",
+        "server": "smtp.example",
+        "port": 465,
+        "user": "EMAILUSER",
+        "passwd": "EMAILPASS",
+        "reply": "example@domain",
+        "recipient": "example@domain",
     },
     "dirs": {
         "download_dir": str(DEFAULT_DOWNLOAD_DIR),

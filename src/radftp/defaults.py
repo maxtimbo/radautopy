@@ -7,11 +7,10 @@ args_dict = {
 
 DEFAULT_CONFIG = {
     "FTP": {
-        "ftp_server": str,
-        "ftp_username": str,
-        "ftp_password": str,
-        "ftp_pasv": True,
-        "ftp_dir": "",
-        "ftp_files": ""
+        "server": str,
+        "username": str,
+        "password": str,
+        "pasv": True,
+        "dir": "",
     },
 }
