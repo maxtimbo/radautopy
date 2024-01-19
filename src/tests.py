@@ -10,13 +10,7 @@ config = radftp.defaults.DEFAULT_CONFIG | defaults.DEFAULT_CONFIG | defaults.DEF
 confile = Path('test.json')
 conf = ConfigJSON(confile, config)
 
-print('filemap')
-for track in conf.filemap:
-    print(track)
-
-print('dict')
-for track in conf.config_dict['filemap']:
-    print(track)
+conf.quick_filemap()
 
 #conf.select_track()
 #conf.set_filemap()

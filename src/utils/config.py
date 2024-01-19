@@ -36,19 +36,47 @@ class ConfigJSON:
         except Exception as e:
             logger.exception(e)
 
-    def set_filemap(self) -> None:
+    def filemap_wizard_select(self) -> None:
         print(f"You are now setting up the filemap for {self.config_file}")
         print("Available variables are:")
         replacements = [[ph, func(placeholder=ph, original=ph)] for ph, func in self._replacement_functions.items()]
         print(tabulate(replacements, headers=['Variable', 'Example Output'], tablefmt="simple_outline"))
         print("\nUse these variables to create search patterns or replacement patterns.")
         print(f"For example: `input {{week}}{{year}}.mp3` would become `input {self.week}{self.year}.mp3`\n")
+        print("You can choose to select an individual track to edit, use the filemap wizard, or use the quick show filemap wizard.")
 
+        selection = click.prompt("(I)ndividual track edit/(F)ilemap wizard/(Q)uick show wizard", type=click.Choice(['i', 'f', 'q'], case_sensitive=False))
+        if 'i' in selection:
+            self.select_track()
+        elif 'f' in selection:
+            self.set_filemap()
+        elif 'q' in selection:
+            self.quick_filemap()
+
+        self.save_config()
+
+    def set_filemap(self) -> None:
         for track in self.config_dict['filemap']:
             track = self.set_track(track)
-
         self._next_continue(track)
-        self.save_config()
+
+    def quick_filemap(self) -> None:
+        print("This is the quick filemap setup program.")
+        print("Variables will be created for shows that follow a certain pattern.")
+        hours = click.prompt("How many hours?", type=int)
+        start_hour = click.confirm("Start hours from 1?")
+        segments = click.prompt("How many segments per hour?", type=int)
+        start_seg = click.confirm("Start segments from 1?")
+
+
+        input_pattern = click.prompt("Define an input pattern: ", type=str)
+        output_pattern = click.prompt("Define an output pattern: ", type=str)
+        artist_pattern = click.prompt("Define an artist field pattern: ", type=str)
+        title_pattern = click.prompt("Define a title field pattern: ", type=str)
+
+        for hour in range(hours):
+            for segment in range(segments):
+                print(input_pattern.format(hour=hour + 1 if start_hour else hour, segment=segment + 1 if start_seg else segment))
 
     def select_track(self) -> None:
         for i, track in enumerate(self.config_dict['filemap']):
@@ -56,22 +84,21 @@ class ConfigJSON:
 
         trackid = click.prompt('Select a track to edit: ', type=int)
         self.set_track(self.config_dict['filemap'][trackid])
-        self.save_config()
 
-    def _next_continue(self, track: dict):
+    def _next_continue(self, track: dict) -> None:
         cond = click.prompt('(C)reate a new track, (D)uplicate the last track, or (Q)uit?',
                             type=click.Choice(['c', 'd', 'q'], case_sensitive=False),
                             default='q')
         if 'c' in cond:
             track = self.set_track({k:"" for k, v in self.config_dict['filemap'][0].items()})
-            print(track)
-            self.config_dict['filemap'].append(track)
-            self._next_continue(track)
         elif 'd' in cond:
             track = self.set_track(track)
-            print(track)
-            self.config_dict['filemap'].append(track)
-            self._next_continue(track)
+        elif 'q' in cond:
+            return
+
+        print(track)
+        self.config_dict['filemap'].append(track)
+        self._next_continue(track)
 
     def set_interactive(self, config_dict: dict):
         self.config_dict = config_dict
