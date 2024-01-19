@@ -1,6 +1,8 @@
-from ftplib import FTP
 import logging
 import traceback
+import pathlib
+
+from ftplib import FTP
 
 logger = logging.getLogger('__main__')
 
@@ -12,7 +14,7 @@ class RadFTP:
         self.passwd = passwd
         self.directory = directory
 
-    def connect(self, function, pasv: bool = True, *args, **kwargs):
+    def do_action(self, function, pasv: bool = True, *args, **kwargs):
         with FTP(self.server) as self.ftp:
             self.ftp.login(user = self.user, passwd = self.passwd)
             self.ftp.set_pasv(pasv)
@@ -41,7 +43,7 @@ class RadFTP:
 
         return files
 
-    def download_file(self, remote_file: str, local_file: str):
+    def download_file(self, remote_file: str, local_file: pathlib.Path | str):
         try:
             self.ftp.nlst(remote_file)
             with open(local_file, 'wb') as f:

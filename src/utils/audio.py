@@ -30,7 +30,8 @@ class AudioFile:
             self._input_file = input_file
         else:
             logger.exception(FileNotFoundError(f"FileNotFound: {str(input_file)}"))
-            raise FileNotFoundError(input_file)
+            self._input_file = input_file
+            #raise FileNotFoundError(input_file)
 
     @property
     def output_file(self) -> pathlib.Path | None:
@@ -124,8 +125,11 @@ class AudioFile:
         audio_copy_lm = audio_copy.with_suffix(audio_copy.suffix + local_suffix)
         try:
             shutil.copy(audio_in, audio_copy)
+            logger.debug(f'Copied {audio_in} to {audio_copy}')
             shutil.copy(audio_in, audio_copy_lm)
+            logger.debug(f'Copied {audio_in} to {audio_copy_lm}')
             shutil.move(audio_in, self.output_file)
+            logger.debug(f'Moved {audio_in} to {self.output_file}')
         except Exception as e:
             logger.exception(Exception(traceback.format_exc()))
 
@@ -134,6 +138,7 @@ class AudioFile:
         audio_out = self._create_output(new_filename)
         try:
             shutil.move(audio_in, audio_out)
+            logger.debug(f'Moved {audio_in} to {audio_out}')
         except Exception as e:
             logger.exception(Exception(traceback.format_exc()))
 
