@@ -56,35 +56,34 @@ def Main():
     mailer.add_footer('This is an automated messasge. Please reply to tfinley@dbcradio.com for questions.')
 
     if args.subparser == 'run':
-        files = config.ftp_files.split()
-        while files and args.tries > 0:
+        tracks = config.filemap
+        while tracks and args.tries > 0:
             mailer.message = ""
             ftp = RadFTP(config.FTP['server'], config.FTP['username'], config.FTP['password'], config.FTP['dir'])
-            for a in reversed(files):
-                local = Path(config.download_dir, a)
-                ftp.connect(ftp.download_file, remote_file=a, local_file=str(local))
-                local = AudioFile(local, Path(config.export_dir, a))
-                old = AudioFile(Path(config.audio_tmp, a))
-                mailer.add_attachment(old.input_file, 'mp3')
+            for track in reversed(tracks):
+                ftp.do_action(ftp.download_file, remote_file=track['input_file'], local_file=Path(config.dirs['download_dir'], track['input_file']))
+                local = AudioFile(Path(config.dirs['download_dir'], track['input_file']), Path(config.dirs['export_dir'], track['output_file']))
+                old = AudioFile(Path(config.dirs['audio_tmp'], track['output_file']))
                 if local.analyse() == old.analyse():
-                    mailer.p(f'{a} has not been updated.')
+                    mailer.p(f'{track["input_file"]} has not been updated.')
                 else:
-                    mailer.p(f'{a} has been updated.')
-                    files.remove(a)
+                    mailer.p(f'{track["input_file"]} has been updated.')
+                    tracks.remove(track)
 
-                local.move_copy(Path(config.audio_tmp, a))
+                local.move_copy(Path(config.dirs['audio_tmp'], track['input_file']))
+                mailer.add_attachment(old.input_file, 'mp3')
             args.tries -= 1
-            if files and args.tries > 0:
+            if tracks and args.tries > 0:
                 sleep_timer = args.sleep if args.sleep is not None else 1200
-                logger.info(f'Update incomplete. Attempts left: {args.tries}. Files left: {files}')
+                logger.info(f'Update incomplete. Attempts left: {args.tries}. Files left: {tracks}')
                 mailer.subject = 'Update Incomplete'
                 mailer.p('All files have not been updated')
                 mailer.p(f'Will try {args.tries} more time.' if args.tries == 1 else f'Will try {args.tries} times')
                 if args.email: mailer.send_mail()
                 logger.info(f'Sleeping for {sleep_timer} seconds.')
                 sleep(sleep_timer)
-            elif files and args.tries == 0:
-                logger.info(f'Update incomplete. Files left: {files}. Giving up.')
+            elif tracks and args.tries == 0:
+                logger.info(f'Update incomplete. Files left: {tracks}. Giving up.')
                 mailer.subject = 'Update Incomplete - Giving up'
                 mailer.p('All files have not been update')
                 mailer.p('Giving up.')

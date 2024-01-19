@@ -108,6 +108,7 @@ class RadMail:
         self.attachments.append(Attachment(filename, subtype))
 
     def concat_message(self, tag: str, message: str) -> None:
+        logger.info(message)
         self.message += f"<{tag}>{message}</{tag}>\n"
 
     def add_footer(self, footer_text: str) -> None:
