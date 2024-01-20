@@ -9,7 +9,7 @@ from copy import deepcopy, copy
 from functools import partial
 from tabulate import tabulate
 
-from utils.cmdlts import make_dirs
+from utils.cmdlts import make_dirs, SafeDict
 
 
 logger = logging.getLogger('__main__')
@@ -61,22 +61,40 @@ class ConfigJSON:
         self._next_continue(track)
 
     def quick_filemap(self) -> None:
+        trackobj = {
+             "input_file": "",
+             "output_file": "",
+             "artist": "",
+             "title": ""
+        }
         print("This is the quick filemap setup program.")
         print("Variables will be created for shows that follow a certain pattern.")
         hours = click.prompt("How many hours?", type=int)
-        start_hour = click.confirm("Start hours from 1?")
+        start_hour = click.confirm("Start hours from 1?", default='y')
         segments = click.prompt("How many segments per hour?", type=int)
-        start_seg = click.confirm("Start segments from 1?")
+        start_seg = click.confirm("Start segments from 1?", default='y')
 
-
+        print('Use variables {hour} and {segment} where you need them. You can also use the other variables above')
         input_pattern = click.prompt("Define an input pattern: ", type=str)
         output_pattern = click.prompt("Define an output pattern: ", type=str)
         artist_pattern = click.prompt("Define an artist field pattern: ", type=str)
         title_pattern = click.prompt("Define a title field pattern: ", type=str)
 
+        allowed_variables = {'hour', 'segment'}
+        filemap = []
+
         for hour in range(hours):
             for segment in range(segments):
-                print(input_pattern.format(hour=hour + 1 if start_hour else hour, segment=segment + 1 if start_seg else segment))
+                track = copy(trackobj)
+                context = SafeDict(hour= hour + 1 if start_hour else hour, segment= segment + 1 if start_seg else segment)
+                track['input_file'] = input_pattern.format_map(context)
+                track['output_file'] = output_pattern.format_map(context)
+                track['artist'] = artist_pattern.format_map(context)
+                track['title'] = title_pattern.format_map(context)
+                filemap.append(track)
+
+        self.config_dict['filemap'] = filemap
+
 
     def select_track(self) -> None:
         for i, track in enumerate(self.config_dict['filemap']):

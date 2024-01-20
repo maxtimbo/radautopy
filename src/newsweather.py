@@ -34,7 +34,8 @@ def Main():
             }
         ),
     ]
-    args = BaseArgs(radftp.args_dict, runners)
+    base = BaseArgs(radftp.args_dict, runners)
+    args = base.get_args()
     if args.verbose:
         logger = RadLogger(LOG_FILE, __name__, verbose = True).get_logger(__name__)
         logger.setLevel(logging.DEBUG)
