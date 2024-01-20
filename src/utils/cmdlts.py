@@ -21,33 +21,61 @@ def make_dirs(path: pathlib.Path | str):
     return path
 
 
-def BaseArgs(varis: dict, runner_args: list[tuple] = None) -> argparse.ArgumentParser:
-    helptext = varis['description'] + "\nCreate a new config file by using the edit_config option. Config files are stored in ~/.config/radautopy by default."
-    parser = argparse.ArgumentParser(prog=varis['prog'], description=helptext)
-    group = parser.add_mutually_exclusive_group()
-    subparsers = parser.add_subparsers(dest='subparser')
+class BaseArgs:
+    def __init__(self, varis: dict, runner_args: list[tuple] = None) -> None:
+        helptext = varis['description'] + "\nCreate a new config file by using the edit_config option. Config files are stored in ~/.config/radautopy by default."
+        self.parser = argparse.ArgumentParser(prog=varis['prog'], description=helptext)
+        self.group = self.parser.add_mutually_exclusive_group()
+        self.subparsers = self.parser.add_subparsers(dest='subparser')
 
-    group.add_argument('--edit_config', help='edit or create a new config')
-    group.add_argument('--edit_filemap', help='edit or create a new filemap')
+        self.group.add_argument('--edit_config', help='edit or create a new config')
+        self.group.add_argument('--edit_filemap', help='edit or create a new filemap')
 
-    parser.add_argument('--config', help='config file')
-    parser.add_argument('-v', '--verbose', help='verbose output to stdout', action='store_true')
+        self.parser.add_argument('--config', help='config file')
+        self.parser.add_argument('-v', '--verbose', help='verbose output to stdout', action='store_true')
 
-    run = subparsers.add_parser('run')
-    run.add_argument('-e', '--email', help='email output', action='store_true')
-    run.add_argument('-d', '--dry_run', help='dry run; emails will not be sent, files will not be downloaded.', action='store_true')
-    if runner_args is not None:
-        for arg in runner_args:
-            run.add_argument(*arg[:-1], **arg[-1])
+        self.run = self.subparsers.add_parser('run')
+        self.run.add_argument('-e', '--email', help='email output', action='store_true')
+        self.run.add_argument('-d', '--dry_run', help='dry run; emails will not be sent, files will not be downloaded.', action='store_true')
+        if runner_args is not None:
+            for arg in runner_args:
+                self.run.add_argument(*arg[:-1], **arg[-1])
 
-    validate = subparsers.add_parser('validate')
-    validate.add_argument('-e', '--email', help='validate and test email settings', action='store_true')
+        self.validate = self.subparsers.add_parser('validate')
+        self.validate.add_argument('-e', '--email', help='validate and test email settings', action='store_true')
 
-    args = parser.parse_args()
+    def get_args(self) -> argparse.ArgumentParser:
+        self.args = self.parser.parse_args()
+        return self.args
 
-    if args.subparser == 'validate':
-        raise NotImplementedError('Validation has not yet been implemented.')
-        if args.email:
-            raise NotImplementedError('Validation has not yet been implemented')
 
-    return args
+#def BaseArgs(varis: dict, runner_args: list[tuple] = None) -> argparse.ArgumentParser:
+#    helptext = varis['description'] + "\nCreate a new config file by using the edit_config option. Config files are stored in ~/.config/radautopy by default."
+#    parser = argparse.ArgumentParser(prog=varis['prog'], description=helptext)
+#    group = parser.add_mutually_exclusive_group()
+#    subparsers = parser.add_subparsers(dest='subparser')
+#
+#    group.add_argument('--edit_config', help='edit or create a new config')
+#    group.add_argument('--edit_filemap', help='edit or create a new filemap')
+#
+#    parser.add_argument('--config', help='config file')
+#    parser.add_argument('-v', '--verbose', help='verbose output to stdout', action='store_true')
+#
+#    run = subparsers.add_parser('run')
+#    run.add_argument('-e', '--email', help='email output', action='store_true')
+#    run.add_argument('-d', '--dry_run', help='dry run; emails will not be sent, files will not be downloaded.', action='store_true')
+#    if runner_args is not None:
+#        for arg in runner_args:
+#            run.add_argument(*arg[:-1], **arg[-1])
+#
+#    validate = subparsers.add_parser('validate')
+#    validate.add_argument('-e', '--email', help='validate and test email settings', action='store_true')
+#
+#    args = parser.parse_args()
+#
+#    return args
+
+
+class SafeDict(dict):
+    def __missing__(self, key):
+        return '{' + key + '}'

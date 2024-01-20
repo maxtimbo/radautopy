@@ -22,16 +22,154 @@
     },
     "filemap": [
         {
-            "input_file": "input{week}{year} Hour1.mp3",
-            "output_file": "output{now}.wav",
-            "artist": "Artist {now}",
-            "title": "title {now}"
+            "input_file": "GBH {weekday} 20{year} Hour 1 Segment 1.mp3",
+            "output_file": "SY3H1S1.wav",
+            "artist": "GBH Show",
+            "title": "Updated {now}"
         },
         {
-            "input_file": "input{week}{year}.mp3",
-            "output_file": "output1.wav",
-            "artist": "Atist {now}",
-            "title": "Title {now}"
+            "input_file": "GBH {weekday} 20{year} Hour 1 Segment 2.mp3",
+            "output_file": "SY3H1S2.wav",
+            "artist": "GBH Show",
+            "title": "Updated {now}"
+        },
+        {
+            "input_file": "GBH {weekday} 20{year} Hour 1 Segment 3.mp3",
+            "output_file": "SY3H1S3.wav",
+            "artist": "GBH Show",
+            "title": "Updated {now}"
+        },
+        {
+            "input_file": "GBH {weekday} 20{year} Hour 1 Segment 4.mp3",
+            "output_file": "SY3H1S4.wav",
+            "artist": "GBH Show",
+            "title": "Updated {now}"
+        },
+        {
+            "input_file": "GBH {weekday} 20{year} Hour 1 Segment 5.mp3",
+            "output_file": "SY3H1S5.wav",
+            "artist": "GBH Show",
+            "title": "Updated {now}"
+        },
+        {
+            "input_file": "GBH {weekday} 20{year} Hour 2 Segment 1.mp3",
+            "output_file": "SY3H2S1.wav",
+            "artist": "GBH Show",
+            "title": "Updated {now}"
+        },
+        {
+            "input_file": "GBH {weekday} 20{year} Hour 2 Segment 2.mp3",
+            "output_file": "SY3H2S2.wav",
+            "artist": "GBH Show",
+            "title": "Updated {now}"
+        },
+        {
+            "input_file": "GBH {weekday} 20{year} Hour 2 Segment 3.mp3",
+            "output_file": "SY3H2S3.wav",
+            "artist": "GBH Show",
+            "title": "Updated {now}"
+        },
+        {
+            "input_file": "GBH {weekday} 20{year} Hour 2 Segment 4.mp3",
+            "output_file": "SY3H2S4.wav",
+            "artist": "GBH Show",
+            "title": "Updated {now}"
+        },
+        {
+            "input_file": "GBH {weekday} 20{year} Hour 2 Segment 5.mp3",
+            "output_file": "SY3H2S5.wav",
+            "artist": "GBH Show",
+            "title": "Updated {now}"
+        },
+        {
+            "input_file": "GBH {weekday} 20{year} Hour 3 Segment 1.mp3",
+            "output_file": "SY3H3S1.wav",
+            "artist": "GBH Show",
+            "title": "Updated {now}"
+        },
+        {
+            "input_file": "GBH {weekday} 20{year} Hour 3 Segment 2.mp3",
+            "output_file": "SY3H3S2.wav",
+            "artist": "GBH Show",
+            "title": "Updated {now}"
+        },
+        {
+            "input_file": "GBH {weekday} 20{year} Hour 3 Segment 3.mp3",
+            "output_file": "SY3H3S3.wav",
+            "artist": "GBH Show",
+            "title": "Updated {now}"
+        },
+        {
+            "input_file": "GBH {weekday} 20{year} Hour 3 Segment 4.mp3",
+            "output_file": "SY3H3S4.wav",
+            "artist": "GBH Show",
+            "title": "Updated {now}"
+        },
+        {
+            "input_file": "GBH {weekday} 20{year} Hour 3 Segment 5.mp3",
+            "output_file": "SY3H3S5.wav",
+            "artist": "GBH Show",
+            "title": "Updated {now}"
+        },
+        {
+            "input_file": "GBH {weekday} 20{year} Hour 4 Segment 1.mp3",
+            "output_file": "SY3H4S1.wav",
+            "artist": "GBH Show",
+            "title": "Updated {now}"
+        },
+        {
+            "input_file": "GBH {weekday} 20{year} Hour 4 Segment 2.mp3",
+            "output_file": "SY3H4S2.wav",
+            "artist": "GBH Show",
+            "title": "Updated {now}"
+        },
+        {
+            "input_file": "GBH {weekday} 20{year} Hour 4 Segment 3.mp3",
+            "output_file": "SY3H4S3.wav",
+            "artist": "GBH Show",
+            "title": "Updated {now}"
+        },
+        {
+            "input_file": "GBH {weekday} 20{year} Hour 4 Segment 4.mp3",
+            "output_file": "SY3H4S4.wav",
+            "artist": "GBH Show",
+            "title": "Updated {now}"
+        },
+        {
+            "input_file": "GBH {weekday} 20{year} Hour 4 Segment 5.mp3",
+            "output_file": "SY3H4S5.wav",
+            "artist": "GBH Show",
+            "title": "Updated {now}"
+        },
+        {
+            "input_file": "GBH {weekday} 20{year} Hour 5 Segment 1.mp3",
+            "output_file": "SY3H5S1.wav",
+            "artist": "GBH Show",
+            "title": "Updated {now}"
+        },
+        {
+            "input_file": "GBH {weekday} 20{year} Hour 5 Segment 2.mp3",
+            "output_file": "SY3H5S2.wav",
+            "artist": "GBH Show",
+            "title": "Updated {now}"
+        },
+        {
+            "input_file": "GBH {weekday} 20{year} Hour 5 Segment 3.mp3",
+            "output_file": "SY3H5S3.wav",
+            "artist": "GBH Show",
+            "title": "Updated {now}"
+        },
+        {
+            "input_file": "GBH {weekday} 20{year} Hour 5 Segment 4.mp3",
+            "output_file": "SY3H5S4.wav",
+            "artist": "GBH Show",
+            "title": "Updated {now}"
+        },
+        {
+            "input_file": "GBH {weekday} 20{year} Hour 5 Segment 5.mp3",
+            "output_file": "SY3H5S5.wav",
+            "artist": "GBH Show",
+            "title": "Updated {now}"
         }
     ]
 }
