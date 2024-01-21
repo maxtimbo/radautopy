@@ -118,8 +118,10 @@ class ConfigJSON:
         self.config_dict['filemap'].append(track)
         self._next_continue(track)
 
-    def set_interactive(self, config_dict: dict):
-        self.config_dict = config_dict
+    def set_interactive(self, config_dict: dict = None):
+        if config_dict != None:
+            self.config_dict = config_dict
+
         print(f"You are now setting the values of {self.config_file}")
         print("Leave the value blank if you do not want to modify it.")
         print("Use absolute paths wherever a directory is required")
