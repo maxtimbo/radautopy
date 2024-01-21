@@ -13,28 +13,14 @@ import radftp.defaults as radftp
 import defaults
 
 DEFAULT_CONF = radftp.DEFAULT_CONFIG | defaults.DEFAULT_CONFIG | defaults.DEFAULT_FILEMAP
-DEFAULT_CONF_FILE = Path(defaults.DEFAULT_CONFIG_DIR, "newsweather", "newsweather.json")
-LOG_FILE = Path(defaults.DEFAULT_LOG_DIR, "newsweather", "newsweather.log")
-radftp.args_dict['prog'] = 'DBC News and Weather Downloader'
+DEFAULT_CONF_FILE = Path(defaults.DEFAULT_CONFIG_DIR, "standardftp", "standardftp.json")
+LOG_FILE = Path(defaults.DEFAULT_LOG_DIR, "standardftp", "standardftp.log")
 
 logger = RadLogger(LOG_FILE, __name__).get_logger()
 
 
 def Main():
-    runners = [
-        ('-t', '--tries', {
-            'help': 'how many tries before giving up',
-            'type': int,
-            'required': True,
-            }
-        ),
-        ('-s', '--sleep', {
-            'help': 'override default sleep time. default time is 1200 seconds (20 minutes).',
-            'type': int,
-            }
-        ),
-    ]
-    base = BaseArgs(radftp.args_dict, runners)
+    base = BaseArgs(radftp.args_dict)
     args = base.get_args()
     if args.verbose:
         logger = RadLogger(LOG_FILE, __name__, verbose = True).get_logger(__name__)
@@ -48,14 +34,10 @@ def Main():
     base.args.config = config
     base.builtins()
 
-    mailer = RadMail('WJCL Mailer',
-                     'subject',
-                     config.email['reply'],
-                     config.email['recipient'],
-                     config.email['server'],
-                     config.email['port'],
-                     config.email['user'],
-                     config.email['passwd'])
+    config.email['sender'] = 'WJCL Mailer'
+    config.email['subject'] = 'Standard Subject'
+
+    mailer = RadMail(config.email)
 
     mailer.add_footer('This is an automated messasge. Please reply to tfinley@dbcradio.com for questions.')
 
@@ -65,21 +47,16 @@ def Main():
             mailer.message = ""
             ftp = RadFTP(config.FTP['server'], config.FTP['username'], config.FTP['password'], config.FTP['dir'])
             for track in reversed(tracks):
-                download = Path(config.dirs['download_dir'], track['input_file'])
-                tmp = Path(config.dirs['audio_tmp'], track['input_file'])
-                export = Path(config.dirs['export_dir'], track['output_file'])
-                ftp.do_action(ftp.download_file, remote_file=track['input_file'], local_file=download)
-                local = AudioFile(download, export)
-                old = AudioFile(tmp)
+                ftp.do_action(ftp.download_file, remote_file=track['input_file'], local_file=Path(config.dirs['download_dir'], track['input_file']))
+                local = AudioFile(Path(config.dirs['download_dir'], track['input_file']), Path(config.dirs['export_dir'], track['output_file']))
+                old = AudioFile(Path(config.dirs['audio_tmp'], track['output_file']))
                 if local.analyse() == old.analyse():
                     mailer.p(f'{track["input_file"]} has not been updated.')
                 else:
                     mailer.p(f'{track["input_file"]} has been updated.')
                     tracks.remove(track)
 
-                local.copy(tmp)
-                local.apply_metadata(track['artist'], track['title'])
-                local.move()
+                local.move_copy(Path(config.dirs['audio_tmp'], track['input_file']))
                 mailer.add_attachment(old.input_file, 'mp3')
             args.tries -= 1
             if tracks and args.tries > 0:

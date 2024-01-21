@@ -76,7 +76,7 @@ class AudioFile:
         logger.debug(f'Running command: {subprocess.list2cmdline(cmd_line)}')
         return subprocess.Popen(cmd_line, *args, **kwargs)
 
-    def apply_metadata(self, artist: str, title: str, apply_today: bool = False, apply_input: bool = False) -> None:
+    def apply_metadata(self, artist: str, title: str, apply_today: bool = False, apply_input: bool = True) -> None:
         audio = self._check_output(apply_input)
 
         if apply_today:
@@ -119,17 +119,12 @@ class AudioFile:
         except Exception as exc:
             logger.exception(Exception(traceback.format_exc()))
 
-    def move_copy(self, new_filename: pathlib.Path | str = None, local_suffix: str = "_lm", apply_input: bool = True) -> None:
+    def copy(self, copy_file: pathlib.Path | str, apply_input: bool = True) -> None:
         audio_in = self._check_output(apply_input)
-        audio_copy = self.force_path(new_filename)
-        audio_copy_lm = audio_copy.with_suffix(audio_copy.suffix + local_suffix)
+        audio_copy = self.force_path(copy_file)
         try:
             shutil.copy(audio_in, audio_copy)
             logger.debug(f'Copied {audio_in} to {audio_copy}')
-            shutil.copy(audio_in, audio_copy_lm)
-            logger.debug(f'Copied {audio_in} to {audio_copy_lm}')
-            shutil.move(audio_in, self.output_file)
-            logger.debug(f'Moved {audio_in} to {self.output_file}')
         except Exception as e:
             logger.exception(Exception(traceback.format_exc()))
 

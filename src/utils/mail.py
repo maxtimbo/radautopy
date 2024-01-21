@@ -95,9 +95,10 @@ class RadMail:
             logger.info(f"subject overwritten at send - {alt_subject}")
 
         msg = self.prepare()
+        logger.debug(f'{self.smtp_server}:{self.port}, {type(self.port)}')
 
         try:
-            with smtplib.SMTP_SSL(self.smtp_server, self.port) as smtp:
+            with smtplib.SMTP_SSL(self.smtp_server, int(self.port)) as smtp:
                 smtp.ehlo()
                 smtp.login(self.username, self.password)
                 smtp.sendmail(self.sender, self.recipient, msg.as_string())
