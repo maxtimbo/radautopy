@@ -46,24 +46,25 @@ def Main():
         config = ConfigJSON(DEFAULT_CONF_FILE, DEFAULT_CONF)
 
     base.args.config = config
-    base.builtins()
 
-    mailer = RadMail('WJCL Mailer',
-                     'subject',
-                     config.email['reply'],
-                     config.email['recipient'],
-                     config.email['server'],
-                     config.email['port'],
-                     config.email['user'],
-                     config.email['passwd'])
+    config.email['sender'] = 'WJCL Mailer'
+    config.email['subject'] = 'subject'
+
+    mailer = RadMail(**config.email)
 
     mailer.add_footer('This is an automated messasge. Please reply to tfinley@dbcradio.com for questions.')
+
+    ftp = RadFTP(**config.FTP)
+
+    base.validators.append(mailer.validate)
+    base.validators.append(ftp.validate)
+
+    base.builtins()
 
     if args.subparser == 'run':
         tracks = config.filemap
         while tracks and args.tries > 0:
             mailer.message = ""
-            ftp = RadFTP(config.FTP['server'], config.FTP['username'], config.FTP['password'], config.FTP['dir'])
             for track in reversed(tracks):
                 download = Path(config.dirs['download_dir'], track['input_file'])
                 tmp = Path(config.dirs['audio_tmp'], track['input_file'])

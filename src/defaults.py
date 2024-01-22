@@ -13,9 +13,9 @@ DEFAULT_CONFIG = {
     "email": {
         "server": "smtp.example",
         "port": 465,
-        "user": "EMAILUSER",
-        "passwd": "EMAILPASS",
-        "reply": "example@domain",
+        "username": "EMAILUSER",
+        "password": "EMAILPASS",
+        "reply_to": "example@domain",
         "recipient": "example@domain",
     },
     "dirs": {

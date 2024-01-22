@@ -43,7 +43,7 @@ class RadMail:
     reply_to: str
     recipient: list | str
 
-    smtp_server: str
+    server: str
     port: int
     username: str
     password: str
@@ -95,15 +95,29 @@ class RadMail:
             logger.info(f"subject overwritten at send - {alt_subject}")
 
         msg = self.prepare()
-        logger.debug(f'{self.smtp_server}:{self.port}, {type(self.port)}')
+        logger.debug(f'server:port = {self.server}:{self.port}')
 
         try:
-            with smtplib.SMTP_SSL(self.smtp_server, int(self.port)) as smtp:
+            with smtplib.SMTP_SSL(self.server, int(self.port)) as smtp:
                 smtp.ehlo()
                 smtp.login(self.username, self.password)
                 smtp.sendmail(self.sender, self.recipient, msg.as_string())
         except Exception as e:
             logger.exception(e)
+
+    def validate(self) -> None:
+        print('~~ Mail Settings ~~')
+        print(f'server:port: {self.server}:{self.port}')
+        print(f'username: {self.username}')
+        print(f'password: {self.password}')
+        print(f'reply-to: {self.reply_to}')
+        print(f'recipient: {self.recipient}')
+        self.message = "Test successful!"
+        try:
+            self.send_mail("Mailer Test", "Mailer Test Successful")
+            print('~~ Email sent successfully ~~')
+        except:
+            print('~~ Email failed! ~~')
 
     def add_attachment(self, filename: pathlib.Path, subtype: str) -> None:
         self.attachments.append(Attachment(filename, subtype))

@@ -25,7 +25,8 @@ class ConfigJSON:
     def __init__(self, config_file: pathlib.Path, default_dict: dict) -> None:
         self.config_file = config_file
         self.config_dict = self._parse_json() if self.config_file.exists() else self.set_interactive(default_dict)
-        self._set_attributes()
+        if self.config_dict is not None:
+            self._set_attributes()
 
     def _parse_json(self) -> dict:
         try:
@@ -148,12 +149,14 @@ class ConfigJSON:
                 for subkey, subval in self.config_dict[key].items():
                     print(f"{subkey} = {subval}")
 
-        if not click.confirm('\nAre these settings correct?'):
-            self.set_interactive()
-        else:
+        if click.confirm('\nAre these settings correct?'):
             if click.confirm(f'Write config file to {self.config_file}?'):
                 self.save_config()
                 self._set_attributes()
+            else:
+                return
+        else:
+            self.set_interactive()
 
     def save_config(self) -> None:
         try:
