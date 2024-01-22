@@ -11,6 +11,6 @@ DEFAULT_CONFIG = {
         "username": str,
         "password": str,
         "pasv": True,
-        "dir": "",
+        "directory": "",
     },
 }
