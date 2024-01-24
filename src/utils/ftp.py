@@ -76,5 +76,5 @@ class RadFTP:
     def download_files(self, file_map: list[tuple]):
         for f in file_map:
             remote, local = f
-            self.do_action(self.download_file, remote, local)
+            self.do_action(self.download_file, remote_file=remote, local_file=local)
 

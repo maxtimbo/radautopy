@@ -20,6 +20,8 @@ class ConfigJSON:
     now     = today.strftime("%y%m%d %H:%M")
     weekday = today.strftime("%A")
     year    = today.strftime("%y")
+    month   = today.strftime("%m")
+    day     = today.strftime("%d")
     week    = today.strftime("%U")
 
     def __init__(self, config_file: pathlib.Path, default_dict: dict) -> None:
@@ -36,6 +38,16 @@ class ConfigJSON:
             return config
         except Exception as e:
             logger.exception(e)
+
+    def concat_directories_filemap(self):
+        for i, track in enumerate(self.filemap):
+            self.filemap[i]['input_file'] = pathlib.Path(self.dirs['download_dir'], track['input_file'])
+            self.filemap[i]['output_file'] = pathlib.Path(self.dirs['export_dir'], track['output_file'])
+
+        for track in self.filemap:
+            logger.debug('~'*10)
+            for k, v in track.items():
+                logger.debug(f'{k}: {v}')
 
     def filemap_wizard_select(self) -> None:
         print(f"You are now setting up the filemap for {self.config_file}")
@@ -207,83 +219,8 @@ class ConfigJSON:
         '{now}'     : partial(_replace_placeholder, value=now),
         '{weekday}' : partial(_replace_placeholder, value=weekday),
         '{year}'    : partial(_replace_placeholder, value=year),
+        '{month}'   : partial(_replace_placeholder, value=month),
+        '{day}'     : partial(_replace_placeholder, value=day),
         '{week}'    : partial(_replace_placeholder, value=week)
     }
 
-
-#class RadConfig:
-#    def __init__(self, config_dict: dict, config_file: pathlib.Path) -> None:
-#        self.config_dict = config_dict
-#        self.config_file = config_file
-#        if self.check_config():
-#            self.get_config()
-#
-#    def check_config(self) -> bool:
-#        if not self.config_file.exists():
-#            if click.confirm(f'The config file {self.config_file} does not exist. Would you like to create one now?'):
-#                self.set_interactive()
-#                return True
-#            else:
-#                return False
-#        else:
-#            return True
-#
-#    def get_config(self) -> configparser.ConfigParser:
-#        conf = configparser.ConfigParser()
-#        conf.read(self.config_file)
-#        self.config_dict = {s:dict(conf.items(s)) for s in conf.sections()}
-#        self.validate_dirs()
-#        self.set_attributes()
-#
-#    def validate_dirs(self) -> None:
-#        for directory in self.config_dict['dirs']:
-#            make_dirs(pathlib.Path(self.config_dict['dirs'][directory]))
-#
-#    def save_config(self) -> None:
-#        self.conf = configparser.ConfigParser()
-#        for key in self.config_dict:
-#            self.conf[key] = self.config_dict[key]
-#
-#        make_dirs(self.config_file.parents[0])
-#        with open(self.config_file, 'w') as f:
-#            self.conf.write(f)
-#
-#    def set_interactive(self) -> None:
-#        print(f"You are now setting the values of {self.config_file}")
-#        print("Leave the value blank if you do not want to modify it.")
-#        print("Use absolute paths wherever a directory is required")
-#        for key in self.config_dict:
-#            note = f"Setting values for {key}"
-#            print('\n' + note)
-#            print('-'*len(note))
-#            for subkey, subval in self.config_dict[key].items():
-#                print(f'{subkey} = {subval}')
-#                try:
-#                    self.config_dict[key][subkey] = str(input(f'Define {subkey}: ') or subval)
-#                except EOFError:
-#                    return
-#
-#        print('\nPlease confirm config:')
-#        for key, value in self.config_dict.items():
-#            print(f'[{key}]')
-#            for subkey, subval in self.config_dict[key].items():
-#                print(f"{subkey} = {subval}")
-#
-#        if not click.confirm('\nAre these settings correct?'):
-#            self.set_interactive()
-#        else:
-#            if click.confirm(f'Write config file to {self.config_file}?'):
-#                self.save_config()
-#
-#    def set_attributes(self) -> None:
-#        for key in self.config_dict:
-#            setattr(self, key, self.config_dict[key])
-#            logger.debug(f'setting attr {key} as {self.config_dict[key]}')
-#            for subkey in self.config_dict[key]:
-#                logger.debug(f'setting attr {subkey} as {self.config_dict[key][subkey]}')
-#                if 'dirs' in key:
-#                    setattr(self, subkey, pathlib.Path(self.config_dict[key][subkey]))
-#                else:
-#                    setattr(self, subkey, self.config_dict[key][subkey])
-#
-#
