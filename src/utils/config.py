@@ -11,30 +11,27 @@ from tabulate import tabulate
 
 from utils.cmdlts import make_dirs, SafeDict
 
-
-logger = logging.getLogger('__main__')
+logger = logging.getLogger()
 
 
 class ConfigJSON:
     today   = datetime.datetime.today()
-    now     = today.strftime("%y%m%d %H:%M")
-    weekday = today.strftime("%A")
-    year    = today.strftime("%y")
-    month   = today.strftime("%m")
-    day     = today.strftime("%d")
-    week    = today.strftime("%U")
 
-    def __init__(self, config_file: pathlib.Path, default_dict: dict) -> None:
-        self.config_file = config_file
-        self.config_dict = self._parse_json() if self.config_file.exists() else self.set_interactive(default_dict)
+    def __init__(self, config_file: str, add_config: dict) -> None:
+        self.global_config = pathlib.Path(DEFAULT_CONFIG_DIR, "global.json")
+        self.config_file = pathlib.Path(DEFAULT_CONFIG_DIR, config_file)
+
+
+        self.global_dict = self._parse_json(self.global_config) if self.global_config.exists() else self.set_interactive(GLOBAL_DICT)
+        self.config_dict = self._parse_json(self.config_file) if self.config_file.exists() else self.set_interactive(default_dict)
         if self.config_dict is not None:
             self._set_attributes()
 
-    def _parse_json(self) -> dict:
+    def _parse_json(self, config_file: pathlib.Path) -> dict:
         try:
-            with open(self.config_file, 'r') as f:
+            with open(config_file, 'r') as f:
                 config = json.load(f)
-            logger.debug(f'{self.config_file} loaded sucessfully')
+            logger.debug(f'{config_file} loaded sucessfully')
             return config
         except Exception as e:
             logger.exception(e)
@@ -216,11 +213,11 @@ class ConfigJSON:
         return original.replace(placeholder, copy(value))
 
     _replacement_functions = {
-        '{now}'     : partial(_replace_placeholder, value=now),
-        '{weekday}' : partial(_replace_placeholder, value=weekday),
-        '{year}'    : partial(_replace_placeholder, value=year),
-        '{month}'   : partial(_replace_placeholder, value=month),
-        '{day}'     : partial(_replace_placeholder, value=day),
-        '{week}'    : partial(_replace_placeholder, value=week)
+        '{now}'     : partial(_replace_placeholder, value=today.strftime("%y%m%d %H:%M")),
+        '{weekday}' : partial(_replace_placeholder, value=today.strftime("%A")),
+        '{year}'    : partial(_replace_placeholder, value=today.strftime("%y")),
+        '{month}'   : partial(_replace_placeholder, value=today.strftime("%m")),
+        '{day}'     : partial(_replace_placeholder, value=today.strftime("%d")),
+        '{week}'    : partial(_replace_placeholder, value=today.strftime("%U"))
     }
 

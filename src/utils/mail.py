@@ -11,7 +11,7 @@ from email.mime.audio import MIMEAudio
 from email.mime.application import MIMEApplication
 
 
-logger = logging.getLogger('__main__')
+logger = logging.getLogger()
 
 
 class Attachment:
@@ -54,6 +54,24 @@ class RadMail:
     header: str = None
     footer: str = None
     body_style: str = "\"margin: 20px\""
+
+    @property
+    def footer(self) -> str:
+        return self._footer
+
+    @footer.setter
+    def footer(self, footer: str) -> None:
+        """Overwrite this method for a custom footer"""
+        self._footer = f"<div style=\"text-align: center\"><hr width=\"90%\" size=\"5px\" color=\"gray\"><p><b>{footer}</b></p></div>"
+
+    @property
+    def header(self) -> str:
+        return self._header
+
+    @header.setter
+    def header(self, header: str) -> None:
+        """Overwrite this method for a custom header"""
+        self._header = f"<div class=\"header\"><p>{header}</p></div>"
 
     def prepare(self) -> MIMEMultipart:
         msg = MIMEMultipart()
@@ -125,14 +143,6 @@ class RadMail:
     def concat_message(self, tag: str, message: str) -> None:
         logger.info(message)
         self.message += f"<{tag}>{message}</{tag}>\n"
-
-    def add_footer(self, footer_text: str) -> None:
-        """Overwrite this method for a custom footer"""
-        self.footer = f"<div style=\"text-align: center\"><hr width=\"90%\" size=\"5px\" color=\"gray\"><p><b>{footer_text}</b></p></div>"
-
-    def add_header(self, header_text: str) -> None:
-        """Overwrite this method for a custom header"""
-        self.header = f"<div class=\"header\"><p>{header_text}</p></div>"
 
     h1 = partialmethod(concat_message, "h1")
     h2 = partialmethod(concat_message, "h2")
