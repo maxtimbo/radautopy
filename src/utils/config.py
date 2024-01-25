@@ -9,23 +9,23 @@ from copy import deepcopy, copy
 from functools import partial
 from tabulate import tabulate
 
-from utils.cmdlts import make_dirs, SafeDict
+from . import CONFIG_DIR, LOGGER_NAME, EMAIL_CONFIG, DEFAULT_DIRS, DEFAULT_FILEMAP
+from utils.utilities import make_dirs, SafeDict
 
-logger = logging.getLogger()
+logger = logging.getLogger(LOGGER_NAME)
 
 
 class ConfigJSON:
     today   = datetime.datetime.today()
 
     def __init__(self, config_file: str, add_config: dict) -> None:
-        self.global_config = pathlib.Path(DEFAULT_CONFIG_DIR, "global.json")
-        self.config_file = pathlib.Path(DEFAULT_CONFIG_DIR, config_file)
+        self.email_config = pathlib.Path(CONFIG_DIR, "email.json")
+        self.config_file = pathlib.Path(CONFIG_DIR, config_file)
 
+        default_dict: dict = add_config | DEFAULT_DIRS | DEFAULT_FILEMAP
 
-        self.global_dict = self._parse_json(self.global_config) if self.global_config.exists() else self.set_interactive(GLOBAL_DICT)
+        self.email_dict = self._parse_json(self.email_config) if self.email_config.exists() else self.set_interactive(EMAIL_CONFIG)
         self.config_dict = self._parse_json(self.config_file) if self.config_file.exists() else self.set_interactive(default_dict)
-        if self.config_dict is not None:
-            self._set_attributes()
 
     def _parse_json(self, config_file: pathlib.Path) -> dict:
         try:
@@ -52,7 +52,7 @@ class ConfigJSON:
         replacements = [[ph, func(placeholder=ph, original=ph)] for ph, func in self._replacement_functions.items()]
         print(tabulate(replacements, headers=['Variable', 'Example Output'], tablefmt="simple_outline"))
         print("\nUse these variables to create search patterns or replacement patterns.")
-        print(f"For example: `input {{week}}{{year}}.mp3` would become `input {self.week}{self.year}.mp3`\n")
+        print(f"For example: `input {{week}}{{year}}.mp3` would become `input {self.today.strftime("%U")}{self.today.strftime("%y")}.mp3`\n")
         print("You can choose to select an individual track to edit, use the filemap wizard, or use the quick show filemap wizard.")
 
         selection = click.prompt("(I)ndividual track edit/(F)ilemap wizard/(Q)uick show wizard", type=click.Choice(['i', 'f', 'q'], case_sensitive=False))
@@ -128,14 +128,11 @@ class ConfigJSON:
         self.config_dict['filemap'].append(track)
         self._next_continue(track)
 
-    def set_interactive(self, config_dict: dict = None):
-        if config_dict != None:
-            self.config_dict = config_dict
-
-        print(f"You are now setting the values of {self.config_file}")
+    def set_interactive(self, config: dict, config_file: pathlib.Path) -> dict:
+        print(f"You are now setting the values of {config_file}")
         print("Leave the value blank if you do not want to modify it.")
         print("Use absolute paths wherever a directory is required")
-        for key in self.config_dict:
+        for key in config_dict:
             if 'filemap' in key:
                 note = f'Skipping {key} for now.'
                 print('\n' + note)
@@ -144,47 +141,49 @@ class ConfigJSON:
                 note = f"Setting values for {key}"
                 print('\n' + note)
                 print('-'*len(note))
-                for subkey, subval in self.config_dict[key].items():
+                for subkey, subval in config_dict[key].items():
                     print(f'{subkey} = {subval}')
                     try:
-                        self.config_dict[key][subkey] = str(input(f'Define {subkey}: ') or subval)
+                        config_dict[key][subkey] = str(input(f'Define {subkey}: ') or subval)
                     except EOFError:
                         return
 
         print('\nPlease confirm config:')
-        for key, value in self.config_dict.items():
+        for key, value in config_dict.items():
             if 'filemap' not in key:
                 print(f'[{key}]')
-                for subkey, subval in self.config_dict[key].items():
+                for subkey, subval in config_dict[key].items():
                     print(f"{subkey} = {subval}")
 
         if click.confirm('\nAre these settings correct?'):
-            if click.confirm(f'Write config file to {self.config_file}?'):
-                self.save_config()
+            if click.confirm(f'Write config file to {config_file}?'):
+                self.save_config(config, config_file)
                 self._set_attributes()
+                return config
             else:
                 return
         else:
-            self.set_interactive()
+            return config
+            self.set_interactive(config, config_file)
 
-    def save_config(self) -> None:
+    def save_config(self, config: dict, config_file: pathlib.Path) -> None:
         try:
-            make_dirs(self.config_file.parents[0])
-            with open(self.config_file, 'w', encoding='utf-8') as f:
-                json.dump(self.config_dict, f, ensure_ascii=False, indent=4)
+            make_dirs(config_file.parents[0])
+            with open(config_file, 'w', encoding='utf-8') as f:
+                json.dump(config, f, ensure_ascii=False, indent=4)
 
-            logger.info(f'{self.config_file} saved sucessfully.')
+            logger.info(f'{config_file} saved sucessfully.')
 
         except Exception as e:
             logger.exception(e)
 
-    def _set_attributes(self) -> None:
-        for key in self.config_dict:
+    def _set_attributes(self, config: dict) -> None:
+        for key in config:
             if 'filemap' not in key:
-                setattr(self, key, deepcopy(self.config_dict[key]))
-                logger.debug(f'setting attr {key} as {self.config_dict[key]}')
+                setattr(self, key, deepcopy(config[key]))
+                logger.debug(f'setting attr {key} as {config[key]}')
             else:
-                self.filemap = deepcopy(self.config_dict['filemap'])
+                self.filemap = deepcopy(config['filemap'])
                 for track in self.filemap:
                     for k, v in track.items():
                         track[k] = self._iter_ph(v)

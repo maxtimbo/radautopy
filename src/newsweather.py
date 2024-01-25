@@ -3,16 +3,17 @@ import logging
 from pathlib import Path
 from time import sleep
 
+from utils import ARGS_DICT, LOG_DIR, FTP_CONFIG
 from utils.audio import AudioFile
-from utils.cmdlts import BaseArgs
+from utils.baseargs import BaseArgs
 from utils.config import ConfigJSON
 from utils.ftp import RadFTP
 from utils.mail import RadMail, Attachment
-from utils.settings import RadLogger
+from utils.log_setup import RadLogger
 
 DEFAULT_CONF_FILE = "newsweather.json"
-LOG_FILE = Path(defaults.DEFAULT_LOG_DIR, "newsweather.log")
-ARGS_DICT['prog'] = 'DBC News and Weather Downloader'
+LOG_FILE = Path(LOG_DIR, "newsweather.log")
+ARGS_DICT['program'] = 'DBC News and Weather Downloader'
 
 logger = RadLogger(LOG_FILE).get_logger()
 
@@ -38,9 +39,9 @@ def Main():
         logger.setLevel(logging.DEBUG)
 
     if args.config is not None:
-        config = ConfigJSON(args.config, ADD_CONFIG)
+        config = ConfigJSON(args.config, FTP_CONFIG)
     else:
-        config = ConfigJSON(DEFAULT_CONF_FILE, ADD_CONFIG)
+        config = ConfigJSON(DEFAULT_CONF_FILE, FTP_CONFIG)
 
     base.args.config = config
 

@@ -1,6 +1,9 @@
+import logging
 import pathlib
 
-logger = logging.getLogger()
+from . import LOGGER_NAME
+
+logger = logging.getLogger(LOGGER_NAME)
 
 def make_dirs(path: pathlib.Path | str):
     if pathlib.Path.is_dir(path):

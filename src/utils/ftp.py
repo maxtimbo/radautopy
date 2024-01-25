@@ -4,7 +4,9 @@ import pathlib
 
 from ftplib import FTP, error_perm
 
-logger = logging.getLogger()
+from . import LOGGER_NAME
+
+logger = logging.getLogger(LOGGER_NAME)
 
 
 class RadFTP:
