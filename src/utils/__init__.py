@@ -3,12 +3,12 @@ import pathlib
 LOGGER_NAME = "RadioAutoPy Logger"
 
 ROOT_DIR = pathlib.Path("~/radautopy").expanduser()
-LOG_DIR = pathlib.Path(DEFAULT_ROOT_DIR, "log")
-CONFIG_DIR = pathlib.Path(DEFAULT_ROOT_DIR, "config")
+LOG_DIR = pathlib.Path(ROOT_DIR, "log")
+CONFIG_DIR = pathlib.Path(ROOT_DIR, "config")
 
-DOWNLOAD_DIR = pathlib.Path(DEFAULT_ROOT_DIR, "download")
-EXPORT_DIR = pathlib.Path(DEFAULT_ROOT_DIR, "export")
-AUDIO_TMP = pathlib.Path(DEFAULT_ROOT_DIR, "audio_tmp")
+DOWNLOAD_DIR = pathlib.Path(ROOT_DIR, "download")
+EXPORT_DIR = pathlib.Path(ROOT_DIR, "export")
+AUDIO_TMP = pathlib.Path(ROOT_DIR, "audio_tmp")
 
 ARGS_DICT = {
     "program": "RadioAutoPy",
@@ -32,9 +32,9 @@ EMAIL_CONFIG = {
 
 DEFAULT_DIRS = {
     "dirs": {
-        "download_dir": str(DEFAULT_DOWNLOAD_DIR),
-        "export_dir": str(DEFAULT_EXPORT_DIR),
-        "audio_tmp": str(DEFAULT_AUDIO_TMP),
+        "download_dir": str(DOWNLOAD_DIR),
+        "export_dir": str(EXPORT_DIR),
+        "audio_tmp": str(AUDIO_TMP),
     }
 }
 

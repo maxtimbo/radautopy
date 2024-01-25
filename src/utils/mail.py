@@ -10,8 +10,10 @@ from email.mime.text import MIMEText
 from email.mime.audio import MIMEAudio
 from email.mime.application import MIMEApplication
 
+from . import LOGGER_NAME
 
-logger = logging.getLogger()
+
+logger = logging.getLogger(LOGGER_NAME)
 
 
 class Attachment:

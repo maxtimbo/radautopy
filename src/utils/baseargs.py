@@ -5,7 +5,9 @@ import traceback
 
 from typing import Callable
 
-logger = logging.getLogger()
+from . import LOGGER_NAME
+
+logger = logging.getLogger(LOGGER_NAME)
 
 class BaseArgs:
     def __init__(self, varis: dict, runner_args: list[tuple] = None) -> None:
