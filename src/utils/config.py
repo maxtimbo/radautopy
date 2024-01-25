@@ -19,19 +19,20 @@ class ConfigJSON:
     today   = datetime.datetime.today()
 
     def __init__(self, config_file: str, add_config: dict) -> None:
-        self.email_config = pathlib.Path(CONFIG_DIR, "email.json")
-        self.config_file = pathlib.Path(CONFIG_DIR, config_file)
+        self.email_config: pathlib.Path = pathlib.Path(CONFIG_DIR, "email.json")
+        self.config_file: pathlib.Path = pathlib.Path(CONFIG_DIR, config_file)
 
         default_dict: dict = add_config | DEFAULT_DIRS | DEFAULT_FILEMAP
 
-        self.email_dict = self._parse_json(self.email_config) if self.email_config.exists() else self.set_interactive(EMAIL_CONFIG)
-        self.config_dict = self._parse_json(self.config_file) if self.config_file.exists() else self.set_interactive(default_dict)
+        self.email_dict = self._parse_json(self.email_config) if self.email_config.exists() else self.set_interactive(EMAIL_CONFIG, self.email_config)
+        self.config_dict = self._parse_json(self.config_file) if self.config_file.exists() else self.set_interactive(default_dict, self.config_file)
 
     def _parse_json(self, config_file: pathlib.Path) -> dict:
         try:
             with open(config_file, 'r') as f:
                 config = json.load(f)
             logger.debug(f'{config_file} loaded sucessfully')
+            self._set_attributes(config)
             return config
         except Exception as e:
             logger.exception(e)
@@ -52,7 +53,7 @@ class ConfigJSON:
         replacements = [[ph, func(placeholder=ph, original=ph)] for ph, func in self._replacement_functions.items()]
         print(tabulate(replacements, headers=['Variable', 'Example Output'], tablefmt="simple_outline"))
         print("\nUse these variables to create search patterns or replacement patterns.")
-        print(f"For example: `input {{week}}{{year}}.mp3` would become `input {self.today.strftime("%U")}{self.today.strftime("%y")}.mp3`\n")
+        print(f"For example: `input {{week}}{{year}}.mp3` would become `input {self.today.strftime('%U')}{self.today.strftime('%y')}.mp3`\n")
         print("You can choose to select an individual track to edit, use the filemap wizard, or use the quick show filemap wizard.")
 
         selection = click.prompt("(I)ndividual track edit/(F)ilemap wizard/(Q)uick show wizard", type=click.Choice(['i', 'f', 'q'], case_sensitive=False))
@@ -63,7 +64,7 @@ class ConfigJSON:
         elif 'q' in selection:
             self.quick_filemap()
 
-        self.save_config()
+        self.save_config(self.config_dict, self.config_file)
 
     def set_filemap(self) -> None:
         for track in self.config_dict['filemap']:
@@ -128,11 +129,16 @@ class ConfigJSON:
         self.config_dict['filemap'].append(track)
         self._next_continue(track)
 
-    def set_interactive(self, config: dict, config_file: pathlib.Path) -> dict:
+    def edit_config(self) -> None:
+        self.set_interactive(self.config_dict, self.config_file, True)
+        if click.confirm('Would you like to edit the email config?'):
+            self.set_interactive(self.email_dict, self.email_config)
+
+    def set_interactive(self, config: dict, config_file: pathlib.Path, define_overides: bool = False) -> dict:
         print(f"You are now setting the values of {config_file}")
         print("Leave the value blank if you do not want to modify it.")
         print("Use absolute paths wherever a directory is required")
-        for key in config_dict:
+        for key in config:
             if 'filemap' in key:
                 note = f'Skipping {key} for now.'
                 print('\n' + note)
@@ -141,24 +147,43 @@ class ConfigJSON:
                 note = f"Setting values for {key}"
                 print('\n' + note)
                 print('-'*len(note))
-                for subkey, subval in config_dict[key].items():
+                for subkey, subval in config[key].items():
                     print(f'{subkey} = {subval}')
-                    try:
-                        config_dict[key][subkey] = str(input(f'Define {subkey}: ') or subval)
-                    except EOFError:
-                        return
+                    config[key][subkey] = click.prompt(f'Define {subkey}: ', default=subval)
+                    #try:
+                    #    config[key][subkey] = str(input(f'Define {subkey}: ') or subval)
+                    #except EOFError:
+                    #    return
+
+        if define_overides and click.confirm('Set email overides?'):
+            config['email'] = {}
+            print(tabulate([[i, k, v] for i, (k, v) in enumerate(self.email_dict['email'].items())], headers=['id', 'key', 'default value'], tablefmt='simple_outline'))
+            selection = click.prompt('Select id to edit', type=int)
+            print(self.email_dict['email'][selection])
+            #config['email'][self.email_dict['email'][selection]]
+            #config['email'][selection] = click.prompt(f'Define {self.email_dict["email"][selection]}')
+
+
+
+            #for key in self.email_dict:
+            #    note = f'Setting override for {key}'
+            #    print('\n' + note)
+            #    print('-'*len(note))
+            #    for k, v in self.email_dict[key].items():
+            #        print(tabulate([(k, v)], tablefmt='simple_outline'))
+            #        config[key][k] = click.prompt(f'Define {k}: ', default=v)
+
+        print(config)
 
         print('\nPlease confirm config:')
-        for key, value in config_dict.items():
+        for key, value in config.items():
             if 'filemap' not in key:
-                print(f'[{key}]')
-                for subkey, subval in config_dict[key].items():
-                    print(f"{subkey} = {subval}")
+                print(tabulate([[k, v] for k, v in config[key].items()], headers=[key, ''], tablefmt="simple_outline"))
 
         if click.confirm('\nAre these settings correct?'):
             if click.confirm(f'Write config file to {config_file}?'):
                 self.save_config(config, config_file)
-                self._set_attributes()
+                self._set_attributes(config)
                 return config
             else:
                 return
