@@ -41,7 +41,7 @@ class BaseArgs:
 
     def builtins(self):
         if self.args.edit_config:
-            self.args.config.set_interactive()
+            self.args.config.edit_config()
 
         if self.args.edit_filemap:
             self.args.config.filemap_wizard_select()
