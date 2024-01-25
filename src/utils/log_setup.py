@@ -7,9 +7,8 @@ import traceback
 
 from logging.handlers import RotatingFileHandler
 
+from utils import DEFAULT_LOGGER_NAME
 from utils.cmdlts import make_dirs
-
-DEFAULT_LOGGER_NAME = "RadioAutoPy Logger"
 
 def get_logger(logger: str = DEFAULT_LOGGER_NAME) -> None:
     return logging.getLogger(logger)
@@ -56,8 +55,8 @@ class RadLogger:
     )
 
 
-    def __init__(self, log_file: pathlib.Path | str, logger_name: str = DEFAULT_LOGGER_NAME, verbose: bool = False) -> None:
-        self.log_file = pathlib.Path(log_file)
+    def __init__(self, log_file: pathlib.Path, logger_name: str = DEFAULT_LOGGER_NAME, verbose: bool = False) -> None:
+        self.log_file = log_file
         make_dirs(self.log_file.parents[0])
         self.logger_name = logger_name
 

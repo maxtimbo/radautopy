@@ -11,8 +11,7 @@ import traceback
 
 import taglib
 
-logger = logging.getLogger('__main__')
-
+logger = logging.getLogger()
 
 class AudioFile:
     def __init__(self, input_file: pathlib.Path | str, output_file: pathlib.Path | str = None) -> None:

@@ -5,28 +5,15 @@ import traceback
 
 from typing import Callable
 
-logger = logging.getLogger('__main__')
-
-
-def make_dirs(path: pathlib.Path | str):
-    if pathlib.Path.is_dir(path):
-        logger.info(f'{path} already exists')
-    else:
-        try:
-            pathlib.Path.mkdir(path, parents=True)
-            logger.info(f'{path} created')
-        except FileNotFoundError as exc:
-            logger.exception(FileNotFoundError(traceback.format_exc()))
-            raise
-    return path
-
+logger = logging.getLogger()
 
 class BaseArgs:
     def __init__(self, varis: dict, runner_args: list[tuple] = None) -> None:
-        helptext = varis['description'] + "\nConfig files are stored in ~/radautopy/config by default."
+        program, helptext = varis.values()
+        helptext = helptext + "\nConfig files are stored in ~/radautopy/config by default."
         self.validators: list = []
 
-        self.parser = argparse.ArgumentParser(prog=varis['prog'], description=helptext)
+        self.parser = argparse.ArgumentParser(prog=program, description=helptext)
         group = self.parser.add_mutually_exclusive_group()
         subparsers = self.parser.add_subparsers(dest='subparser')
 
@@ -65,6 +52,3 @@ class BaseArgs:
                     results = func()
 
 
-class SafeDict(dict):
-    def __missing__(self, key):
-        return '{' + key + '}'

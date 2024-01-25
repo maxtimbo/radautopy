@@ -8,16 +8,13 @@ from utils.cmdlts import BaseArgs
 from utils.config import ConfigJSON
 from utils.ftp import RadFTP
 from utils.mail import RadMail, Attachment
-from utils.settings import RadLogger, get_logger
-import radftp.defaults as radftp
-import defaults
+from utils.settings import RadLogger
 
-DEFAULT_CONF = radftp.DEFAULT_CONFIG | defaults.DEFAULT_CONFIG | defaults.DEFAULT_FILEMAP
-DEFAULT_CONF_FILE = Path(defaults.DEFAULT_CONFIG_DIR, "newsweather", "newsweather.json")
-LOG_FILE = Path(defaults.DEFAULT_LOG_DIR, "newsweather", "newsweather.log")
-radftp.args_dict['prog'] = 'DBC News and Weather Downloader'
+DEFAULT_CONF_FILE = "newsweather.json"
+LOG_FILE = Path(defaults.DEFAULT_LOG_DIR, "newsweather.log")
+ARGS_DICT['prog'] = 'DBC News and Weather Downloader'
 
-logger = RadLogger(LOG_FILE, __name__).get_logger()
+logger = RadLogger(LOG_FILE).get_logger()
 
 
 def Main():
@@ -34,26 +31,20 @@ def Main():
             }
         ),
     ]
-    base = BaseArgs(radftp.args_dict, runners)
+    base = BaseArgs(ARGS_DICT, runners)
     args = base.get_args()
     if args.verbose:
-        logger = RadLogger(LOG_FILE, __name__, verbose = True).get_logger(__name__)
+        logger = RadLogger(LOG_FILE, verbose = True).get_logger()
         logger.setLevel(logging.DEBUG)
 
     if args.config is not None:
-        config = ConfigJSON(Path(args.config), DEFAULT_CONF)
+        config = ConfigJSON(args.config, ADD_CONFIG)
     else:
-        config = ConfigJSON(DEFAULT_CONF_FILE, DEFAULT_CONF)
+        config = ConfigJSON(DEFAULT_CONF_FILE, ADD_CONFIG)
 
     base.args.config = config
 
-    config.email['sender'] = 'WJCL Mailer'
-    config.email['subject'] = 'subject'
-
     mailer = RadMail(**config.email)
-
-    mailer.add_footer('This is an automated messasge. Please reply to tfinley@dbcradio.com for questions.')
-
     ftp = RadFTP(**config.FTP)
 
     base.validators.append(mailer.validate)
