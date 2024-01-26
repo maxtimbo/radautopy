@@ -125,7 +125,6 @@ class ConfigJSON:
         elif 'q' in cond:
             return
 
-        print(track)
         self.config_dict['filemap'].append(track)
         self._next_continue(track)
 
@@ -142,7 +141,6 @@ class ConfigJSON:
             if 'filemap' in key:
                 note = f'Skipping {key} for now.'
                 print('\n' + note)
-                print('-'*len(note))
             else:
                 note = f"Setting values for {key}"
                 print('\n' + note)
@@ -150,28 +148,19 @@ class ConfigJSON:
                 for subkey, subval in config[key].items():
                     print(f'{subkey} = {subval}')
                     config[key][subkey] = click.prompt(f'Define {subkey}: ', default=subval)
-                    #try:
-                    #    config[key][subkey] = str(input(f'Define {subkey}: ') or subval)
-                    #except EOFError:
-                    #    return
 
         if define_overides and click.confirm('Set email overides?'):
             config['email'] = {}
-            print(tabulate([[i, k, v] for i, (k, v) in enumerate(self.email_dict['email'].items())], headers=['id', 'key', 'default value'], tablefmt='simple_outline'))
+            email_dict = [[i, k, v] for i, (k, v) in enumerate(self.email_dict['email'].items())]
+            print(tabulate(email_dict, headers=['id', 'key', 'default value'], tablefmt='simple_outline'))
             selection = click.prompt('Select id to edit', type=int)
-            print(self.email_dict['email'][selection])
+            print(email_dict[selection])
+            print(email_dict[selection][0])
+            k = email_dict[selection][1]
+            print(email_dict[selection][2])
+            #selection = self.email_dict['email'][email_dict[selection][1]]
             #config['email'][self.email_dict['email'][selection]]
-            #config['email'][selection] = click.prompt(f'Define {self.email_dict["email"][selection]}')
-
-
-
-            #for key in self.email_dict:
-            #    note = f'Setting override for {key}'
-            #    print('\n' + note)
-            #    print('-'*len(note))
-            #    for k, v in self.email_dict[key].items():
-            #        print(tabulate([(k, v)], tablefmt='simple_outline'))
-            #        config[key][k] = click.prompt(f'Define {k}: ', default=v)
+            config['email'][email_dict[selection][1]] = click.prompt(f'Define {email_dict[selection][1]}', default=email_dict[selection][2])
 
         print(config)
 
@@ -205,8 +194,14 @@ class ConfigJSON:
     def _set_attributes(self, config: dict) -> None:
         for key in config:
             if 'filemap' not in key:
-                setattr(self, key, deepcopy(config[key]))
-                logger.debug(f'setting attr {key} as {config[key]}')
+                if 'email' in key and hasattr(self, 'email'):
+                    for k, v in config['email'].items():
+                        self.email[k] = v
+                        self.email_dict['email'][k] = v
+                        logger.debug(f'overridding {k} to {v}')
+                else:
+                    setattr(self, key, deepcopy(config[key]))
+                    logger.debug(f'setting attr {key} as {config[key]}')
             else:
                 self.filemap = deepcopy(config['filemap'])
                 for track in self.filemap:
