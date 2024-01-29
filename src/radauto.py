@@ -29,22 +29,31 @@ def cli(ctx, verbose, config_file, ftp, rclone, http):
     Please supply a config file.
     You can specify verbose to output to stdout.
     """
+    ctx.ensure_object(dict)
     if verbose:
         logger = RadLogger(LOG_FILE, verbose=True).get_logger()
 
     if ftp:
         config = ConfigJSON(config_file, FTP_CONFIG)
+        mailer = RadMail(**config.email)
+        ftp = RadFTP(**config.FTP)
         ctx.obj['config'] = config
+        ctx.obj['mailer'] = mailer
+        ctx.obj['ftp'] = ftp
     elif rclone:
         pass
     elif http:
         pass
 
 @cli.command()
+@click.option('-f', '--filemap', is_flag=True, default=False)
 @click.pass_context
-def edit(ctx):
+def edit(ctx, filemap):
     config = ctx.obj.get('config')
-    print(config.email)
+    if filemap:
+        config.filemap_wizard_select()
+    else:
+        config.edit_config()
 
 
 @cli.group()
