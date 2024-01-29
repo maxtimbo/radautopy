@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import argparse
+import click
 from pathlib import Path
 from time import sleep
 
@@ -15,22 +16,83 @@ LOG_FILE = Path(LOG_DIR, "radautopy.log")
 
 logger = RadLogger(LOG_FILE).get_logger()
 
-def Main():
-    parser = argparse.ArgumentParser(prog="Radio Automation Python", description="")
-    parser.add_argument('--config')
-    parser.add_argument('-v', '--verbose')
+@click.group()
+@click.option('-v', '--verbose', is_flag=True, help='enable verbose mode')
+@click.option('--ftp', is_flag=True, help='run as FTP')
+@click.option('--rclone', is_flag=True, help='run as rclone/cloud')
+@click.option('--http', is_flag=True, help='run as http(s)')
+@click.argument('config_file', type=click.Path(exists=False))
+@click.pass_context
+def cli(ctx, verbose, config_file, ftp, rclone, http):
+    """
+    RadioAutoPy command line tool.
+    Please supply a config file.
+    You can specify verbose to output to stdout.
+    """
+    if verbose:
+        logger = RadLogger(LOG_FILE, verbose=True).get_logger()
 
-    edit_group = parser.add_mutually_exclusive_group()
-    edit_group.add_argument('--edit_config', action='store_true')
-    edit_group.add_argument('--edit_filemap', action='store_true')
+    if ftp:
+        config = ConfigJSON(config_file, FTP_CONFIG)
+        ctx.obj['config'] = config
+    elif rclone:
+        pass
+    elif http:
+        pass
 
-    job_type = parser.add_subparsers(dest='job_type')
-    job_group = job_type.add_mutually_exclusive_group()
-    job_group.add_argument('--cloud', action='store_true')
-    job_group.add_argument('--ttwn', action='store_true')
-    ftp_job = job_type.add_subparsers(dest='ftp_job')
-    ftp_job.add_mut
-    job_group.add_argument('--ftp', action='store_true')
+@cli.command()
+@click.pass_context
+def edit(ctx):
+    config = ctx.obj.get('config')
+    print(config.email)
 
-    validators = parser.add_subparsers(dest='validators')
 
+@cli.group()
+def validate():
+    """
+    Validate config file.
+    """
+    print(cli.config_file)
+    click.echo('validate')
+
+@validate.command()
+def email():
+    """
+    Validate email settings.
+    A test email will be sent upon success.
+    """
+    click.echo('validate email')
+
+@validate.command()
+def remote():
+    """
+    Validate remote settings.
+    A list of contents of the remote destination will be supplied upon success.
+    """
+    click.echo('validate remote')
+
+#@cli.group()
+#def run():
+#    """
+#    Use `rclone`, `http`, or `ftp` to run the supplied config file
+#    """
+#    click.echo('run')
+#
+#@run.command()
+#def rclone():
+#    click.echo('rclone')
+#
+#@run.command()
+#def http():
+#    click.echo('http')
+#
+#@run.command()
+#@click.option('--news', is_flag=False, help='use news runner')
+#def ftp(news):
+#    if news:
+#        click.echo('news')
+#    else:
+#        click.echo('standard')
+
+if __name__ == '__main__':
+    cli()
