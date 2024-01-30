@@ -5,16 +5,37 @@ import click
 from pathlib import Path
 from time import sleep
 
-from utils import LOG_DIR, FTP_CONFIG, CONFIG_DIR
+from utils import LOG_DIR, FTP_CONFIG, CONFIG_DIR, CLOUD_CONFIG
 from utils.audio import AudioFile
 from utils.config import ConfigJSON
 from utils.ftp import RadFTP
+from utils.cloud import RadCloud
 from utils.mail import RadMail, Attachment
 from utils.log_setup import RadLogger
 
 LOG_FILE = Path(LOG_DIR, "radautopy.log")
 
 logger = RadLogger(LOG_FILE).get_logger()
+
+def perform_standard(config, mailer, remote):
+    config.concat_directories_filemap()
+    downloads = [(x['input_file'].name, x['input_file']) for x in config.filemap]
+    try:
+        remote.download_files(downloads)
+        for i, o in downloads:
+            mailer.p(f'Downloaded {i} successfully')
+    except:
+        mailer.p('Download unsuccessful')
+    for track in config.filemap:
+        audio = AudioFile(track['input_file'], track['output_file'])
+        audio.apply_metadata(artist=track['artist'], title=track['title'], apply_input=True)
+        try:
+            audio.move()
+            mailer.p(f'moved {track["input_file"]} to {track["output_file"]}')
+        except:
+            mailer.p('move unsuccessful')
+
+    mailer.send_mail()
 
 @click.group()
 def cli():
@@ -44,7 +65,8 @@ def modify(ctx, config_file, config_type):
         config = ConfigJSON(config_file, FTP_CONFIG)
         ctx.obj['remote_src'] = RadFTP(**config.FTP)
     elif 'cloud' in config_type:
-        print(config_type)
+        config = ConfigJSON(config_file, CLOUD_CONFIG)
+        ctx.obj['remote_src'] = RadCloud(**config.cloud)
     elif 'http' in config_type:
         print(config_type)
 
@@ -72,12 +94,18 @@ def validate():
 @validate.command()
 @click.pass_context
 def email(ctx):
+    """
+    Validate email settings.
+    """
     mailer = ctx.obj.get('mailer')
     mailer.validate()
 
 @validate.command()
 @click.pass_context
 def remote(ctx):
+    """
+    Validate/list remote source
+    """
     remote_src = ctx.obj.get('remote_src')
     remote_src.validate()
 
@@ -92,8 +120,12 @@ def run(ctx, verbose, config_file):
     ctx.obj['config'] = config_file
 
 @run.command()
-def rclone():
-    click.echo('rclone')
+@click.pass_context
+def rclone(ctx):
+    config = ConfigJSON(ctx.obj.get('config'), CLOUD_CONFIG)
+    mailer = RadMail(**config.email)
+    cloud = RadCloud(**config.cloud)
+    perform_standard(config, mailer, cloud)
 
 @run.command()
 def http():
@@ -168,24 +200,7 @@ def standard(ctx):
     config = ctx.obj.get('config')
     mailer = ctx.obj.get('mailer')
     ftp = ctx.obj.get('remote')
-    config.concat_directories_filemap()
-    downloads = [(x['input_file'].name, x['input_file']) for x in config.filemap]
-    try:
-        ftp.download_files(downloads)
-        for i, o in downloads:
-            mailer.p(f'Downloaded {i} successfully')
-    except:
-        mailer.p('Download unsuccessful')
-    for track in config.filemap:
-        audio = AudioFile(track['input_file'], track['output_file'])
-        audio.apply_metadata(artist=track['artist'], title=track['title'], apply_input=True)
-        try:
-            audio.move()
-            mailer.p(f'moved {track["input_file"]} to {track["output_file"]}')
-        except:
-            mailer.p('move unsuccessful')
-
-    mailer.send_mail()
+    perform_standard(config, mailer, ftp)
 
 if __name__ == '__main__':
     cli()

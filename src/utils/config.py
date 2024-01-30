@@ -233,6 +233,6 @@ class ConfigJSON:
         '{year}'    : partial(_replace_placeholder, value=today.strftime("%y")),
         '{month}'   : partial(_replace_placeholder, value=today.strftime("%m")),
         '{day}'     : partial(_replace_placeholder, value=today.strftime("%d")),
-        '{week}'    : partial(_replace_placeholder, value=today.strftime("%U"))
+        '{week}'    : partial(_replace_placeholder, value=today.strftime("%V"))
     }
 

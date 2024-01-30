@@ -56,6 +56,13 @@ FTP_CONFIG = {
         "password": str,
         "pasv": True,
         "directory": "",
-    },
+    }
+}
+
+CLOUD_CONFIG = {
+    "cloud": {
+        "server": str,
+        "directory": str
+    }
 }
 
