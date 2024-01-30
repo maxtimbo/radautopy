@@ -158,11 +158,7 @@ class ConfigJSON:
             print(email_dict[selection][0])
             k = email_dict[selection][1]
             print(email_dict[selection][2])
-            #selection = self.email_dict['email'][email_dict[selection][1]]
-            #config['email'][self.email_dict['email'][selection]]
             config['email'][email_dict[selection][1]] = click.prompt(f'Define {email_dict[selection][1]}', default=email_dict[selection][2])
-
-        print(config)
 
         print('\nPlease confirm config:')
         for key, value in config.items():

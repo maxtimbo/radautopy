@@ -33,7 +33,9 @@ class RadFTP:
         print(f'password: {self.password}')
         print(f'directory: {self.directory}')
         try:
-            self.do_action(self.list_remote)
+            files = self.do_action(self.list_remote)
+            for f in files:
+                print(f)
             print('~~ FTP Connection success! ~~')
         except:
             print('~~ FTP Connection Failed! ~~')
