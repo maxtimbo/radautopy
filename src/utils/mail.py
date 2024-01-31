@@ -5,6 +5,7 @@ import pathlib
 
 from dataclasses import dataclass, field
 from functools import partialmethod
+from tabulate import tabulate
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.audio import MIMEAudio
@@ -56,6 +57,7 @@ class RadMail:
     header: str = None
     footer: str = None
     body_style: str = "\"margin: 20px\""
+    table_data: dict = field(default_factory=dict)
 
     @property
     def footer(self) -> str:
@@ -145,6 +147,14 @@ class RadMail:
     def concat_message(self, tag: str, message: str) -> None:
         logger.info(message)
         self.message += f"<{tag}>{message}</{tag}>\n"
+
+    def concat_table(self) -> None:
+        self.message += tabulate(self.table_data, headers="keys", tablefmt="html")
+
+    def append_table_data(self, key: str, value: str) -> None:
+        if key not in self.table_data.keys():
+            self.table_data[key] = []
+        self.table_data[key].append(value)
 
     h1 = partialmethod(concat_message, "h1")
     h2 = partialmethod(concat_message, "h2")

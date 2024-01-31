@@ -23,7 +23,7 @@ def perform_standard(config, mailer, remote):
     try:
         remote.download_files(downloads)
         for i, o in downloads:
-            mailer.p(f'Downloaded {i} successfully')
+            mailer.append_table_data('downloaded', i)
     except:
         mailer.p('Download unsuccessful')
     for track in config.filemap:
@@ -31,10 +31,11 @@ def perform_standard(config, mailer, remote):
         audio.apply_metadata(artist=track['artist'], title=track['title'], apply_input=True)
         try:
             audio.move()
-            mailer.p(f'moved {track["input_file"]} to {track["output_file"]}')
+            mailer.append_table_data('moved to', track['output_file'])
         except:
             mailer.p('move unsuccessful')
 
+    mailer.concat_table()
     mailer.send_mail()
 
 @click.group()
