@@ -5,7 +5,7 @@ import click
 from pathlib import Path
 from time import sleep
 
-from utils import LOG_DIR, FTP_CONFIG, CONFIG_DIR, CLOUD_CONFIG
+from utils import LOG_DIR, FTP_CONFIG, CONFIG_DIR, CLOUD_CONFIG, HTTP_CONFIG, SILENCE_CONFIG
 from utils.audio import AudioFile
 from utils.config import ConfigJSON
 from utils.ftp import RadFTP
@@ -129,8 +129,10 @@ def rclone(ctx):
     perform_standard(config, mailer, cloud)
 
 @run.command()
-def http():
-    click.echo('http')
+@click.pass_context
+def http(ctx):
+    ctx.ensure_onject(dict)
+    config = ConfigJSON(ctx.obj.get('config'), HTTP_CONFIG)
 
 @run.group()
 @click.pass_context
