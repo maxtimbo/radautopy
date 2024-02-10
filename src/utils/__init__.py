@@ -66,3 +66,16 @@ CLOUD_CONFIG = {
     }
 }
 
+HTTP_CONFIG = {
+    "http": {
+        "url": str,
+    }
+}
+
+SILENCE_CONFIG = {
+    "silence": {
+        "threshold": -60,
+        "duration": 15
+    }
+}
+
