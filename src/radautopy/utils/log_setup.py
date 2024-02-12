@@ -8,7 +8,7 @@ import traceback
 from logging.handlers import RotatingFileHandler
 
 from . import LOGGER_NAME
-from utils.utilities import make_dirs
+from .utilities import make_dirs
 
 def get_logger(logger: str = LOGGER_NAME) -> None:
     return logging.getLogger(logger)
