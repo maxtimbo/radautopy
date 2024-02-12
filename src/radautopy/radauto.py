@@ -1,5 +1,3 @@
-#!/usr/bin/python3
-
 import argparse
 import click
 from pathlib import Path
@@ -205,5 +203,3 @@ def standard(ctx):
     ftp = ctx.obj.get('remote')
     perform_standard(config, mailer, ftp)
 
-if __name__ == '__main__':
-    cli()

@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools >= 61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "radautopy"
+version = "2024.0.0a1"
+dependencies = [
+    "beautifulsoup4>=4.12.3",
+    "click>=8.1.6",
+    "feedparser>=6.0.10",
+    "ffmpeg_python>=0.2.0",
+    "lxml>=4.9.4",
+    "pytaglib>=2.1.0",
+    "python3_wget>=0.0.2b1",
+    "rclone_python>=0.1.12",
+    "Requests>=2.31.0",
+    "tabulate>=0.9.0",
+]
+requires-python = ">=3.10"
+authors = [
+    {name = "Tim Finley", email = "tim.finley24@gmail.com"},
+]
+maintainers = [
+    {name = "Tim Finley", email = "tim.finley24@gmail.com"},
+]
+description = "Download and manipulate audio to prepare shows and segments for radio automation systems"
+readme = "README.md"
+license = {file = "LICENSE"}
+
+[project.scripts]
+radautopy = "radautopy.radauto:cli"
