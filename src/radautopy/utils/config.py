@@ -10,7 +10,7 @@ from functools import partial
 from tabulate import tabulate
 
 from . import CONFIG_DIR, LOGGER_NAME, EMAIL_CONFIG, DEFAULT_DIRS, DEFAULT_FILEMAP
-from utils.utilities import make_dirs, SafeDict
+from .utilities import make_dirs, SafeDict
 
 logger = logging.getLogger(LOGGER_NAME)
 

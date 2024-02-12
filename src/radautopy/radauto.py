@@ -3,13 +3,13 @@ import click
 from pathlib import Path
 from time import sleep
 
-from utils import LOG_DIR, FTP_CONFIG, CONFIG_DIR, CLOUD_CONFIG, HTTP_CONFIG, SILENCE_CONFIG
-from utils.audio import AudioFile
-from utils.config import ConfigJSON
-from utils.ftp import RadFTP
-from utils.cloud import RadCloud
-from utils.mail import RadMail, Attachment
-from utils.log_setup import RadLogger
+from .utils import LOG_DIR, FTP_CONFIG, CONFIG_DIR, CLOUD_CONFIG, HTTP_CONFIG, SILENCE_CONFIG
+from .utils.audio import AudioFile
+from .utils.config import ConfigJSON
+from .utils.ftp import RadFTP
+from .utils.cloud import RadCloud
+from .utils.mail import RadMail, Attachment
+from .utils.log_setup import RadLogger
 
 LOG_FILE = Path(LOG_DIR, "radautopy.log")
 
