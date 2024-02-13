@@ -10,7 +10,6 @@ Install dependencies:
 
 ```
 $ sudo apt install rclone ffmpeg -y
-
 ```
 
 Install `radautopy`:
@@ -35,6 +34,38 @@ Once the initial email config is built, you will be prompted to create the show 
 
 Once the initial configuration is done, you can modify it either using the cli tool or you can edit the json file directly.
 
+#### Filemaps
+
+> [!TIP]
+> Use `radautopy modify --[ftp | rclone | http] {CONFIG.json} --filemap` to create the filemap config.
+
+You can choose one of `Individual track edit | Filemap wizard | Quick Show Wizard`.
+
+If you have a show that follows a pattern of hour/segment, use the `Quick Show Wizard`. The `Filemap Wizard` can be used if you just need to iterate from 0 to n or from 1 to n. Once you have a filemap and need to make any adjustments, use either `Filemap Wizard` to iterate all files in the `filemap` or use `Individual track edit` to choose just one track to edit.
+
+> [!NOTE]
+> **TODO**
+> Make Config creation and validation an entirely different cli tool
+
+#### Usage
+
+`radautopy` has been designed with crontab in mind. You can also do one-offs with the verbose flag to make sure everything is working properly. Otherwise, there will be no output when any given config is ran.
+
+To run a config, do:
+
+```
+$ radautopy run {CONFIG_FILE.json} [ftp | rclone | rclone]
+```
+
+If everything is configured correctly, recipients should recieve an email with what was downloaded and where the files were moved to. You can also check the logs in `~/radautopy/logs`.
+
+Once the config is confirmed to be working correctly, you can add a cronjob. Here's an example cron entry:
+
+```
+00 4 * * 1-5 /home/myuser/.local/bin/radautopy run myshow.json ftp
+```
+
+This will run the config `myshow.json` FTP job at 4am every Monday through Friday.
 
 ### Config Templates
 
@@ -42,18 +73,18 @@ Once the initial configuration is done, you can modify it either using the cli t
 
 ```
 {
-	"email": {
-		"sender": str,
-		"subject": str,
-		"server": str,
-		"port": int,
-		"username": str,
-		"password": str,
-		"reply_to": str,
-		"recipient": str | list,
-		"header": str,
-		"footer": str
-	}
+  "email": {
+    "sender": str,
+    "subject": str,
+    "server": str,
+    "port": int,
+    "username": str,
+    "password": str,
+    "reply_to": str,
+    "recipient": str | list,
+    "header": str,
+    "footer": str
+  }
 }
 ```
 
@@ -61,13 +92,13 @@ Once the initial configuration is done, you can modify it either using the cli t
 
 ```
 {
-	"FTP": {
-		"server": str,
-		"username": str,
-		"password": str,
-		"pasv": boolean,
-		"directory": str
-	}
+  "FTP": {
+    "server": str,
+    "username": str,
+    "password": str,
+    "pasv": boolean,
+    "directory": str
+  }
 }
 ```
 
@@ -75,10 +106,10 @@ Once the initial configuration is done, you can modify it either using the cli t
 
 ```
 {
-	"cloud": {
-		"server": str,
-		"directory": str
-	}
+  "cloud": {
+    "server": str,
+    "directory": str
+  }
 }
 ```
 
@@ -90,25 +121,25 @@ Once the initial configuration is done, you can modify it either using the cli t
 
 ```
 {
-	"http": {
-		"url": str
-	}
+  "http": {
+    "url": str
+  }
 }
 ```
 
 ##### Silence Settings
 
-These settings are the split silence function.
+These settings are for the split silence function.
 
 > [!NOTE]
 > Not yet implemented
 
 ```
 {
-	"silence": {
-		"threshold": -60,
-		"duration": 15
-	}
+  "silence": {
+    "threshold": -60,
+    "duration": 15
+  }
 }
 ```
 
@@ -120,11 +151,11 @@ These settings are the split silence function.
 
 ```
 {
-	"dirs": {
-		"download_dir": "~/radautopy/download",
-		"export_dir": "~/radautopy/export",
-		"audio_tmp": "~/radautopy/audio_tmp"
-	}
+  "dirs": {
+    "download_dir": "~/radautopy/download",
+    "export_dir": "~/radautopy/export",
+    "audio_tmp": "~/radautopy/audio_tmp"
+  }
 }
 ```
 
@@ -132,14 +163,14 @@ These settings are the split silence function.
 
 ```
 {
-	"filemap": [
-		{
-			"input_file": "input.mp3",
-			"output_file": "output.wav",
-			"artist": "Artist Metadata",
-			"title": "Title Metadata"
-		}
-	]
+  "filemap": [
+    {
+      "input_file": "input.mp3",
+      "output_file": "output.wav",
+      "artist": "Artist Metadata",
+      "title": "Title Metadata"
+    },
+  ]
 }
-
+```
 

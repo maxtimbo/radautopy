@@ -72,6 +72,7 @@ class ConfigJSON:
         self._next_continue(track)
 
     def quick_filemap(self) -> None:
+
         trackobj = {
              "input_file": "",
              "output_file": "",
@@ -81,28 +82,39 @@ class ConfigJSON:
         print("This is the quick filemap setup program.")
         print("Variables will be created for shows that follow a certain pattern.")
         hours = click.prompt("How many hours?", type=int)
-        start_hour = click.confirm("Start hours from 1?", default='y')
         segments = click.prompt("How many segments per hour?", type=int)
-        start_seg = click.confirm("Start segments from 1?", default='y')
+        iterator = hours * segments
 
-        print('Use variables {hour} and {segment} where you need them. You can also use the other variables above')
+        print('Use variables {hour}, {segment}, and {count} where you need them. You can also use the other variables defined above')
         input_pattern = click.prompt("Define an input pattern: ", type=str)
         output_pattern = click.prompt("Define an output pattern: ", type=str)
         artist_pattern = click.prompt("Define an artist field pattern: ", type=str)
         title_pattern = click.prompt("Define a title field pattern: ", type=str)
 
-        allowed_variables = {'hour', 'segment'}
+
+        allowed_variables = {'hour', 'segment', 'count'}
         filemap = []
 
-        for hour in range(hours):
-            for segment in range(segments):
-                track = copy(trackobj)
-                context = SafeDict(hour= hour + 1 if start_hour else hour, segment= segment + 1 if start_seg else segment)
-                track['input_file'] = input_pattern.format_map(context)
-                track['output_file'] = output_pattern.format_map(context)
-                track['artist'] = artist_pattern.format_map(context)
-                track['title'] = title_pattern.format_map(context)
-                filemap.append(track)
+        for count in range(1, iterator + 1):
+            hour, segment = self.calculate_values(count, segments)
+            track = copy(trackobj)
+            context = SafeDict(hour = hour, segment = segment, count = count)
+            track['input_file'] = input_pattern.format_map(context)
+            track['output_file'] = output_pattern.format_map(context)
+            track['artist'] = artist_pattern.format_map(context)
+            track['title'] = title_pattern.format_map(context)
+            filemap.append(track)
+
+
+        #for hour in range(hours):
+        #    for segment in range(segments):
+        #        track = copy(trackobj)
+        #        context = SafeDict(hour= hour + 1 if start_hour else hour, segment= segment + 1 if start_seg else segment)
+        #        track['input_file'] = input_pattern.format_map(context)
+        #        track['output_file'] = output_pattern.format_map(context)
+        #        track['artist'] = artist_pattern.format_map(context)
+        #        track['title'] = title_pattern.format_map(context)
+        #        filemap.append(track)
 
         self.config_dict['filemap'] = filemap
 
@@ -204,6 +216,12 @@ class ConfigJSON:
                     for k, v in track.items():
                         track[k] = self._iter_ph(v)
                 logger.debug(f"setting attr filemap: {self.filemap}")
+
+    @staticmethod
+    def calculate_values(iterator: int, segments: int) -> tuple:
+        hour = (iterator - 1) // segments + 1
+        segment = (iterator - 1) % segments + 1
+        return hour, segment
 
     @staticmethod
     def set_track(track: dict) -> dict:
