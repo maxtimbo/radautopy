@@ -1,0 +1,34 @@
+# radautopy
+
+### Requirements
+
+`radautopy` assumes that `ffmpeg` and `rclone` is installed on your system. See [more about rclone](https://rclone.org/). `radautopy` has been tested against a NextCloud provider using `rclone`.
+
+### Installation
+
+Install required packages:
+
+```
+$ sudo apt install rclone ffmpeg -y
+
+```
+
+Install `radautopy`:
+
+`pip install radautopy`
+
+
+### Initial Setup
+
+`radautopy` ships with no configuration files by default. You can choose to write them by hand, or use `radautopy modify --[ftp | rclone | http] {some_new_config}.json edit`. For example:
+
+`$ radautopy modify --ftp MyCoolShow.json edit`
+
+This will create the directories for configs as well as logs at `~/radautopy/config` and `~/radautopy/logs`.
+
+Initially, a global email config will be created at `~/radautopy/config/email.json`. 
+
+> [!WARNING]
+> :warning: **Warning**: All passwords are stored in plaintext in the users home directory.
+
+Once the 
