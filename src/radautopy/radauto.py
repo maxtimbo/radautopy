@@ -1,4 +1,3 @@
-import argparse
 import click
 from pathlib import Path
 from time import sleep
