@@ -1,7 +1,3 @@
-<<<<<<< HEAD
-import argparse
-=======
->>>>>>> 24598825c3358d629b1032ca79fdbdd0079a4d4d
 import click
 from pathlib import Path
 from time import sleep
