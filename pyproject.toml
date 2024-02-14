@@ -30,3 +30,4 @@ license = {file = "LICENSE"}
 
 [project.scripts]
 radautopy = "radautopy.radauto:cli"
+radauto-config = "radautopy.radauto_config:create_modify"
