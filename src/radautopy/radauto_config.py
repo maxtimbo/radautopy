@@ -1,6 +1,6 @@
 import click
 
-from .utils import CONFIG_DIR
+from .utils.config_modify import ConfigModify
 
 @click.group()
 def create_modify():
@@ -20,14 +20,13 @@ def list_configs():
 @click.option('--rclone', 'config_type', flag_value='cloud', help='rclone/cloud config')
 @click.option('--http', 'config_type', flag_value='http', help='HTTP(s) config')
 @click.argument('config_file', type=click.Path(exists=False))
-def create(config_file, config_type):
-    defaults = DEFAULT_DIRS | DEFAULT_FILEMAP
-    if 'ftp' in config_type:
-        config_dict = FTP_CONFIG | defaults
-    elif 'cloud' in config_type:
-        config_dict = CLOUD_CONFIG | defaults
-    elif 'http' in config_type:
-        raise NotImplementedError
+def create(config_type, config_file):
+    config = ConfigModify(config_type, config_file)
+    if not config.email_config.exists():
+        config.set_email()
+
+    config.set_config()
+
 
 @create_modify.group()
 def modify():
