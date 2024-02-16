@@ -1,6 +1,7 @@
 import click
 
-from .utils.config_modify import ConfigModify
+from .utils.config.config_modify import ConfigModify
+from .utils.config.config import ConfigJSON
 
 @click.group()
 def create_modify():

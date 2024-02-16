@@ -6,6 +6,7 @@ from copy import copy
 from tabulate import tabulate
 
 from . import CONFIG_DIR, EMAIL_CONFIG, DEFAULT_DIRS, DEFAULT_FILEMAP, CLOUD_CONFIG, JOB_METADATA
+from .replace_fillers import ReplaceFillers
 from ..utilities import SafeDict
 
 def calculate_values(iterator: int, segemtns: int) -> tuple:
@@ -23,35 +24,6 @@ def set_track(track: dict) -> dict:
         set_track(track)
 
     return track
-
-
-class ReplaceFillers:
-    today = datetime.datetime.today()
-
-    def __init__(self, original: str) -> None:
-        self.original = self.iterate_functions(original)
-
-    def iterate_functions(self, original: str) -> str:
-        mutable = copy(original)
-        for filler, function in self.filler_functions.items():
-            if filler in mutable:
-                mutable = function(mutable, filler)
-
-        return mutable
-
-    @staticmethod
-    def replace_fillers(mutable: str, filler: str, value: str) -> str:
-        return mutable.replace(filler, copy(value))
-
-    filler_functions = {
-        '{now}'         : partial(replace_fillers, value = today.strftime('%y%m%d %H:%M')),
-        '{weekday}'     : partial(replace_fillers, value = today.strftime('%A')),
-        '{year}'        : partial(replace_fillers, value = today.strftime('%y')),
-        '{month}'       : partial(replace_fillers, value = today.strftime('%m')),
-        '{day}'         : partial(replace_fillers, value = today.strftime('%d')),
-        '{week}'        : partial(replace_fillers, value = today.strftime('%V'))
-    }
-
 
 class ConfigModify:
     def __init__(self, config_type: str, config_file: str) -> None:
@@ -71,17 +43,6 @@ class ConfigModify:
 
     def set_config(self) -> None:
         self.set_interactive(self.config_dict, self.config_file)
-
-    def set_interactive(self, skel: dict, config_file: pathlib.Path):
-        for key in skel:
-            if not 'filemap' in key:
-                click.echo(f'{"":=^50}\n{"Setting values for":=^50}\n{key:=^50}')
-                for subkey, subval in skel[key].items():
-                    click.echo(f'{subkey} = {subval}')
-                    skel[key][subkey] = click.prompt(f'Define {subkey}:', default=subval)
-            else:
-                self.filemap_wizard_select()
-
         if click.confirm('Set email overrides?'):
             email_overrides = copy(self.email_dict['email'])
             if 'email' in self.config_dict['email']:
@@ -94,6 +55,16 @@ class ConfigModify:
         for k, v in self.email_config['email'].items():
             if v not in updated.values():
                 self.config_dict['email'][k] = updated[k]
+
+    def set_interactive(self, skel: dict, config_file: pathlib.Path):
+        for key in skel:
+            if not 'filemap' in key:
+                click.echo(f'{"":=^50}\n{"Setting values for":=^50}\n{key:=^50}')
+                for subkey, subval in skel[key].items():
+                    click.echo(f'{subkey} = {subval}')
+                    skel[key][subkey] = click.prompt(f'Define {subkey}:', default=subval)
+            else:
+                self.filemap_wizard_select()
 
     def define_email_overrides(self, overrides: dict):
         override_table = [[i, k, v] for i, (k, v) in enumerate(override_table.items())]
@@ -174,5 +145,16 @@ class ConfigModify:
 
         self.config_dict['filemap'].append(track)
         self._next_continue(track)
+
+    def save_config(self, config: dict, config_file: pathlib.Path) -> None:
+        try:
+            make_dirs(config_file.parents[0])
+            with open(config_file, 'w', encoding='utf-8') as f:
+                json.dump(config, f, ensure_ascii=False, indent=4)
+
+            logger.info(f'{config_file} saved sucessfully.')
+
+        except Exception as e:
+            logger.exception(e)
 
 
