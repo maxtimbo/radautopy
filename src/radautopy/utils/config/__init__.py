@@ -25,6 +25,15 @@ EMAIL_CONFIG = {
     }
 }
 
+JOB_METADATA = {
+    "job": {
+        "job_name": str,
+        "description": str,
+        "job_type": str,
+        "cron_expression": str
+    }
+}
+
 DEFAULT_DIRS = {
     "dirs": {
         "download_dir": str(DOWNLOAD_DIR),

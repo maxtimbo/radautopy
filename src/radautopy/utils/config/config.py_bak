@@ -47,7 +47,98 @@ class ConfigJSON:
             for k, v in track.items():
                 logger.debug(f'{k}: {v}')
 
+    def filemap_wizard_select(self) -> None:
+        print(f"You are now setting up the filemap for {self.config_file}")
+        print("Available variables are:")
+        replacements = [[ph, func(placeholder=ph, original=ph)] for ph, func in self._replacement_functions.items()]
+        print(tabulate(replacements, headers=['Variable', 'Example Output'], tablefmt="simple_outline"))
+        print("\nUse these variables to create search patterns or replacement patterns.")
+        print(f"For example: `input {{week}}{{year}}.mp3` would become `input {self.today.strftime('%U')}{self.today.strftime('%y')}.mp3`\n")
+        print("You can choose to select an individual track to edit, use the filemap wizard, or use the quick show filemap wizard.")
 
+        selection = click.prompt("(I)ndividual track edit/(F)ilemap wizard/(Q)uick show wizard", type=click.Choice(['i', 'f', 'q'], case_sensitive=False))
+        if 'i' in selection:
+            self.select_track()
+        elif 'f' in selection:
+            self.set_filemap()
+        elif 'q' in selection:
+            self.quick_filemap()
+
+        self.save_config(self.config_dict, self.config_file)
+
+    def set_filemap(self) -> None:
+        for track in self.config_dict['filemap']:
+            track = self.set_track(track)
+        self._next_continue(track)
+
+    def quick_filemap(self) -> None:
+
+        trackobj = {
+             "input_file": "",
+             "output_file": "",
+             "artist": "",
+             "title": ""
+        }
+        print("This is the quick filemap setup program.")
+        print("Variables will be created for shows that follow a certain pattern.")
+        hours = click.prompt("How many hours?", type=int)
+        segments = click.prompt("How many segments per hour?", type=int)
+        iterator = hours * segments
+
+        print('Use variables {hour}, {segment}, and {count} where you need them. You can also use the other variables defined above')
+        input_pattern = click.prompt("Define an input pattern: ", type=str)
+        output_pattern = click.prompt("Define an output pattern: ", type=str)
+        artist_pattern = click.prompt("Define an artist field pattern: ", type=str)
+        title_pattern = click.prompt("Define a title field pattern: ", type=str)
+
+
+        allowed_variables = {'hour', 'segment', 'count'}
+        filemap = []
+
+        for count in range(1, iterator + 1):
+            hour, segment = self.calculate_values(count, segments)
+            track = copy(trackobj)
+            context = SafeDict(hour = hour, segment = segment, count = count)
+            track['input_file'] = input_pattern.format_map(context)
+            track['output_file'] = output_pattern.format_map(context)
+            track['artist'] = artist_pattern.format_map(context)
+            track['title'] = title_pattern.format_map(context)
+            filemap.append(track)
+
+
+        #for hour in range(hours):
+        #    for segment in range(segments):
+        #        track = copy(trackobj)
+        #        context = SafeDict(hour= hour + 1 if start_hour else hour, segment= segment + 1 if start_seg else segment)
+        #        track['input_file'] = input_pattern.format_map(context)
+        #        track['output_file'] = output_pattern.format_map(context)
+        #        track['artist'] = artist_pattern.format_map(context)
+        #        track['title'] = title_pattern.format_map(context)
+        #        filemap.append(track)
+
+        self.config_dict['filemap'] = filemap
+
+
+    def select_track(self) -> None:
+        for i, track in enumerate(self.config_dict['filemap']):
+            print(tabulate([[key, value] for key, value in track.items()], headers=['track id', i],  tablefmt="simple_outline"))
+
+        trackid = click.prompt('Select a track to edit: ', type=int)
+        self.set_track(self.config_dict['filemap'][trackid])
+
+    def _next_continue(self, track: dict) -> None:
+        cond = click.prompt('(C)reate a new track, (D)uplicate the last track, or (Q)uit?',
+                            type=click.Choice(['c', 'd', 'q'], case_sensitive=False),
+                            default='q')
+        if 'c' in cond:
+            track = self.set_track({k:"" for k, v in self.config_dict['filemap'][0].items()})
+        elif 'd' in cond:
+            track = self.set_track(track)
+        elif 'q' in cond:
+            return
+
+        self.config_dict['filemap'].append(track)
+        self._next_continue(track)
 
     def edit_config(self) -> None:
         self.set_interactive(self.config_dict, self.config_file, True)
