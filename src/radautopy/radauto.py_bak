@@ -2,10 +2,9 @@ import click
 from pathlib import Path
 from time import sleep
 
-from .utils.config import LOG_DIR, FTP_CONFIG, CONFIG_DIR, CLOUD_CONFIG, HTTP_CONFIG, SILENCE_CONFIG
-from .utils.config.config import ConfigJSON
-
+from .utils import LOG_DIR, FTP_CONFIG, CONFIG_DIR, CLOUD_CONFIG, HTTP_CONFIG, SILENCE_CONFIG
 from .utils.audio import AudioFile
+from .utils.config import ConfigJSON
 from .utils.ftp import RadFTP
 from .utils.cloud import RadCloud
 from .utils.mail import RadMail, Attachment
@@ -37,28 +36,43 @@ def perform_standard(config, mailer, remote):
     mailer.send_mail()
 
 @click.group()
+def cli():
+    pass
+
+@cli.group()
 @click.option('-v', '--verbose', is_flag=True, help='enable verbose mode')
-@click.argument('config_file')
+@click.argument('config_file', type=click.Path(exists=False))
 @click.pass_context
-def cli(ctx, config_file, verbose):
+def run(ctx, verbose, config_file):
     if verbose:
         logger = RadLogger(LOG_FILE, verbose=True).get_logger()
-
     ctx.ensure_object(dict)
+    ctx.obj['config'] = config_file
 
-    config = ConfigJSON(config_file)
+@run.command()
+@click.pass_context
+def rclone(ctx):
+    config = ConfigJSON(ctx.obj.get('config'))
+    mailer = RadMail(**config.email)
+    cloud = RadCloud(**config.cloud)
+    perform_standard(config, mailer, cloud)
+
+@run.command()
+@click.pass_context
+def http(ctx):
+    ctx.ensure_onject(dict)
+    config = ConfigJSON(ctx.obj.get('config'))
+
+@run.group()
+@click.pass_context
+def ftp(ctx):
+    ctx.ensure_object(dict)
+    config = ConfigJSON(ctx.obj.get('config'))
     ctx.obj['config'] = config
     ctx.obj['mailer'] = RadMail(**config.email)
+    ctx.obj['remote'] = RadFTP(**config.FTP)
 
-    job_type = config.job['job_type']
-    if 'ftp' in job_type:
-        ctx.obj['remote'] = RadFTP(**config.FTP)
-    elif 'cloud' in job_type:
-        ctx.obj['remote'] = RadCloud(**config.cloud)
-    elif 'http' in job_type:
-        raise NotImplementedError
-
-@cli.command()
+@ftp.command()
 @click.option('-t', '--tries', type=int, default=1, help='define number of tries')
 @click.option('-s', '--sleep_timer', type=int, default=1200, help='define number of seconds between tries')
 @click.pass_context
@@ -112,7 +126,7 @@ def news(ctx, tries, sleep_timer):
     click.echo(tries)
     click.echo(sleep_timer)
 
-@cli.command()
+@ftp.command()
 @click.pass_context
 def standard(ctx):
     config = ctx.obj.get('config')
