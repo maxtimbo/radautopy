@@ -11,7 +11,7 @@ from .config import ConfigJSON
 from .replace_fillers import ReplaceFillers
 from ..utilities import make_dirs, SafeDict
 
-def calculate_values(iterator: int, segemtns: int) -> tuple:
+def calculate_values(iterator: int, segments: int) -> tuple:
     hour = (iterator - 1) // segments + 1
     segment = (iterator - 1) % segments + 1
     return hour, segment
@@ -145,7 +145,7 @@ class ConfigModify:
         filemap = []
 
         for count in range(1, iterator + 1):
-            hour, segment = self.calculate_values(count, segments)
+            hour, segment = calculate_values(count, segments)
             track = copy(trackobj)
             context = SafeDict(hour = hour, segment = segment, count = count)
             track['input_file'] = input_pattern.format_map(context)

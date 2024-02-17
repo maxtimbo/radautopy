@@ -4,6 +4,10 @@ from .utils.config import CONFIG_DIR
 from .utils.config.config_modify import ConfigModify
 from .utils.config.config import ConfigJSON
 
+from .utils.cloud import RadCloud
+from .utils.ftp import RadFTP
+from .utils.mail import RadMail
+
 @click.group()
 def create_modify():
     """
@@ -62,8 +66,23 @@ def modify(config_file):
 
 
 @create_modify.command()
-def validate():
+@click.argument('config_file', required=False)
+def validate(config_file):
     """
     Validate an existing config
     """
-    pass
+    if config_file is None:
+        email = ConfigJSON()
+        mailer = RadMail(**email.email)
+        mailer.validate()
+    else:
+        config = ConfigJSON(config_file)
+        if 'ftp' in config.job['job_type']:
+            remote = RadFTP(**config.FTP)
+        elif 'cloud' in config.job['job_type']:
+            remote = RadCloud(**config.cloud)
+        elif 'http' in config.job['job_type']:
+            raise NotImplementedError
+
+        remote.validate()
+
