@@ -1,4 +1,5 @@
 import datetime
+from copy import copy
 from functools import partial
 
 class ReplaceFillers:

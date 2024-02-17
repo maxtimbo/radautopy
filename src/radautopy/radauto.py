@@ -39,15 +39,6 @@ def perform_standard(config, mailer, remote):
 def cli():
     pass
 
-@cli.command()
-def list_configs():
-    try:
-        contents = CONFIG_DIR.iterdir()
-        for item in contents:
-            click.echo(item.name)
-    except Exception as e:
-        click.echo(f'Error {e}')
-
 @cli.group()
 @click.option('--ftp', 'config_type', flag_value='ftp', help='FTP config')
 @click.option('--rclone', 'config_type', flag_value='cloud', help='rclone/cloud config')

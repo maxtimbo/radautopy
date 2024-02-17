@@ -1,14 +1,21 @@
 import click
 
+from .utils.config import CONFIG_DIR
 from .utils.config.config_modify import ConfigModify
 from .utils.config.config import ConfigJSON
 
 @click.group()
 def create_modify():
+    """
+    Create, modify, or validate config files for radautopy
+    """
     pass
 
 @create_modify.command()
 def list_configs():
+    """
+    Returns the list of available configs
+    """
     try:
         contents = CONFIG_DIR.iterdir()
         for item in contents:
@@ -16,23 +23,47 @@ def list_configs():
     except Exception as e:
         click.echo(f'Error {e}')
 
-@create_modify.group()
+@create_modify.command()
 @click.option('--ftp', 'config_type', flag_value='ftp', help='FTP config')
 @click.option('--rclone', 'config_type', flag_value='cloud', help='rclone/cloud config')
 @click.option('--http', 'config_type', flag_value='http', help='HTTP(s) config')
 @click.argument('config_file', type=click.Path(exists=False))
 def create(config_type, config_file):
-    config = ConfigModify(config_type, config_file)
-    if not config.email_config.exists():
-        config.set_email()
+    """
+    Create a config file
+    """
+    if not config_type:
+        click.echo('\n > A job type must be specified\n')
+        ctx = click.get_current_context()
+        click.echo(ctx.get_help())
+        ctx.exit()
+    else:
+        config = ConfigModify(config_type, config_file)
+        if not config.email_config.exists():
+            config.set_email()
 
-    config.set_config()
+        config.set_config()
 
 
-@create_modify.group()
-def modify():
-    pass
+@create_modify.command()
+@click.argument('config_file', required=False)
+def modify(config_file):
+    """
+    Modify an existing CONFIG_FILE or none to modify global email config
+    """
+    if config_file is None:
+        email = ConfigJSON()
+        config = ConfigModify()
+        config.set_email(email.email_dict)
+    else:
+        config = ConfigJSON(config_file)
+        modify = ConfigModify(config_file = config.config_file)
+        modify.set_config(config.config_dict)
 
-@create_modify.group()
+
+@create_modify.command()
 def validate():
+    """
+    Validate an existing config
+    """
     pass

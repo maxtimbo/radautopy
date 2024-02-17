@@ -14,19 +14,19 @@ logger = logging.getLogger(LOGGER_NAME)
 
 
 class ConfigJSON:
-    def __init__(self, config_file: str) -> None:
+    def __init__(self, config_file: str = None) -> None:
         self.email_config: pathlib.Path = pathlib.Path(CONFIG_DIR, "email.json")
-        self.config_file: pathlib.Path = pathlib.Path(CONFIG_DIR, config_file)
-
         if self.email_config.exists():
             self.email_dict = self._parse_json(self.email_config)
         else:
             raise FileNotFoundError
 
-        if self.config_file.exists():
-            self.config_dict = self._parse_json(self.config_file)
-        else:
-            raise FileNotFoundError
+        if config_file is not None:
+            self.config_file: pathlib.Path = pathlib.Path(CONFIG_DIR, config_file)
+            if self.config_file.exists():
+                self.config_dict = self._parse_json(self.config_file)
+            else:
+                raise FileNotFoundError
 
     def _parse_json(self, config_file: pathlib.Path) -> dict:
         try:
@@ -44,7 +44,7 @@ class ConfigJSON:
             self.filemap[i]['output_file'] = pathlib.Path(self.dirs['export_dir'], track['output_file'])
 
         for track in self.filemap:
-            logger.debug(f'{""~:^30}')
+            logger.debug(f'{""=:^30}')
             for k, v in track.items():
                 logger.debug(f'{k}: {v}')
 
