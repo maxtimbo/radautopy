@@ -6,7 +6,7 @@ import pathlib
 from copy import copy
 from tabulate import tabulate
 
-from . import CONFIG_DIR, EMAIL_CONFIG, DEFAULT_DIRS, DEFAULT_FILEMAP, CLOUD_CONFIG, JOB_METADATA, FTP_CONFIG
+from . import CONFIG_DIR, EMAIL_CONFIG, DEFAULT_DIRS, DEFAULT_FILEMAP, CLOUD_CONFIG, JOB_METADATA, FTP_CONFIG, RSS_CONFIG
 from .config import ConfigJSON
 from .replace_fillers import ReplaceFillers
 from ..utilities import make_dirs, SafeDict
@@ -44,8 +44,8 @@ class ConfigModify:
                 self.config_dict = build_dict(FTP_CONFIG)
             elif 'cloud' in config_type:
                 self.config_dict = build_dict(CLOUD_CONFIG)
-            elif 'http' in config_type:
-                raise NotImplementedError
+            elif 'rss' in config_type:
+                self.config_dict = build_dict(RSS_CONFIG)
 
     def set_email(self, config: dict = EMAIL_CONFIG) -> None:
         conf = self.set_interactive(config)

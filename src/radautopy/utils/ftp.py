@@ -1,3 +1,4 @@
+import click
 import logging
 import traceback
 import pathlib
@@ -27,18 +28,18 @@ class RadFTP:
             return function(*args, **kwargs)
 
     def validate(self) -> None:
-        print('~~ FTP Settings ~~')
-        print(f'server: {self.server}')
-        print(f'username: {self.username}')
-        print(f'password: {self.password}')
-        print(f'directory: {self.directory}')
+        click.echo('~~ FTP Settings ~~')
+        click.echo(f'server: {self.server}')
+        click.echo(f'username: {self.username}')
+        click.echo(f'password: {self.password}')
+        click.echo(f'directory: {self.directory}')
         try:
             files = self.do_action(self.list_remote)
             for f in files:
-                print(f)
-            print('~~ FTP Connection success! ~~')
+                click.echo(f)
+            click.echo('~~ FTP Connection success! ~~')
         except:
-            print('~~ FTP Connection Failed! ~~')
+            click.echo('~~ FTP Connection Failed! ~~')
 
     def list_remote(self, filename: str = None) -> list:
         files = [] if filename is not None else ""

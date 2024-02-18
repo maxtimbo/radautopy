@@ -70,16 +70,8 @@ CLOUD_CONFIG = {
     }
 }
 
-HTTP_CONFIG = {
-    "http": {
+RSS_CONFIG = {
+    "rss": {
         "url": str,
     }
 }
-
-SILENCE_CONFIG = {
-    "silence": {
-        "threshold": -60,
-        "duration": 15
-    }
-}
-

@@ -7,6 +7,7 @@ from .utils.config.config import ConfigJSON
 from .utils.cloud import RadCloud
 from .utils.ftp import RadFTP
 from .utils.mail import RadMail
+from .utils.rss import RadRSS
 
 @click.group()
 def create_modify():
@@ -30,7 +31,7 @@ def list_configs():
 @create_modify.command()
 @click.option('--ftp', 'config_type', flag_value='ftp', help='FTP config')
 @click.option('--rclone', 'config_type', flag_value='cloud', help='rclone/cloud config')
-@click.option('--http', 'config_type', flag_value='http', help='HTTP(s) config')
+@click.option('--rss', 'config_type', flag_value='rss', help='rss config')
 @click.argument('config_file', type=click.Path(exists=False))
 def create(config_type, config_file):
     """
@@ -81,8 +82,9 @@ def validate(config_file):
             remote = RadFTP(**config.FTP)
         elif 'cloud' in config.job['job_type']:
             remote = RadCloud(**config.cloud)
-        elif 'http' in config.job['job_type']:
-            raise NotImplementedError
+        elif 'rss' in config.job['job_type']:
+            click.echo('rss')
+            remote = RadRSS(**config.rss)
 
         remote.validate()
 

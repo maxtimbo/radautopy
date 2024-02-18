@@ -2,17 +2,19 @@ import click
 from pathlib import Path
 from time import sleep
 
-from .utils.config import LOG_DIR, FTP_CONFIG, CONFIG_DIR, CLOUD_CONFIG, HTTP_CONFIG, SILENCE_CONFIG
+from .utils.config import LOG_DIR
 from .utils.config.config import ConfigJSON
 
 from .utils.audio import AudioFile
 from .utils.ftp import RadFTP
 from .utils.cloud import RadCloud
-from .utils.mail import RadMail, Attachment
+from .utils.rss import RadRSS
+from .utils.mail import RadMail
 from .utils.log_setup import RadLogger
 
 from .runners.standard import perform_standard
 from .runners.news import perform_news
+from .runners.split_single import perform_split_single
 
 LOG_FILE = Path(LOG_DIR, "radautopy.log")
 
@@ -37,24 +39,25 @@ def cli(ctx, config_file, verbose):
         ctx.obj['remote'] = RadFTP(**config.FTP)
     elif 'cloud' in job_type:
         ctx.obj['remote'] = RadCloud(**config.cloud)
-    elif 'http' in job_type:
-        raise NotImplementedError
+    elif 'rss' in job_type:
+        ctx.obj['remote'] = RadRSS(**config.rss)
 
 @cli.command()
 @click.option('-t', '--tries', type=int, default=1, help='define number of tries')
 @click.option('-s', '--sleep_timer', type=int, default=1200, help='define number of seconds between tries')
 @click.pass_context
 def news(ctx, tries, sleep_timer):
-    config = ctx.obj.get('config')
-    mailer = ctx.obj.get('mailer')
-    remote = ctx.obj.get('remote')
-    perform_news(config, mailer, remote, tries, sleep_timer)
+    perform_news(ctx.obj.get('config'), ctx.obj.get('mailer'), ctx.obj.get('remote'), tries, sleep_timer)
 
 @cli.command()
 @click.pass_context
 def standard(ctx):
-    config = ctx.obj.get('config')
-    mailer = ctx.obj.get('mailer')
-    remote = ctx.obj.get('remote')
-    perform_standard(config, mailer, remote)
+    perform_standard(ctx.obj.get('config'), ctx.obj.get('mailer'), ctx.obj.get('remote'))
+
+@cli.command()
+@click.option('-t', '--threshold', type=int, default = -60, help='define db threshold for silence split')
+@click.option('-d', '--duration', type=int, default = 15, help='silence duration in seconds')
+@click.pass_context
+def split_single(ctx, threshold, duration):
+    perform_split_single(ctx.obj.get('config'), ctx.obj.get('mailer'), ctx.obj.get('remote'), threshold, duration)
 
