@@ -1,6 +1,6 @@
 from ..utils.audio import AudioFile
 
-def perform_standard(config, mailer, remote):
+def perform_standard(config, mailer, email_bool, remote):
     config.concat_directories_filemap()
     downloads = [(x['input_file'].name, x['input_file']) for x in config.filemap]
     try:
@@ -19,5 +19,5 @@ def perform_standard(config, mailer, remote):
             mailer.p('move unsuccessful')
 
     mailer.concat_table()
-    mailer.send_mail()
+    if email_bool: mailer.send_mail()
 

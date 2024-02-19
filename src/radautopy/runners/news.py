@@ -8,7 +8,7 @@ from ..utils.audio import AudioFile
 
 logger = logging.getLogger(LOGGER_NAME)
 
-def perform_news(config, mailer, remote, tries, sleep_timer):
+def perform_news(config, mailer, remote, email_bool, tries, sleep_timer):
     tracks = config.filemap
     while tracks and tries > 0:
         mailer.message = ""
@@ -36,7 +36,7 @@ def perform_news(config, mailer, remote, tries, sleep_timer):
             mailer.subject = 'Update Incomplete'
             mailer.p('All files have not been updated')
             mailer.p(f'Will try {tries} more time.' if tries == 1 else f'Will try {tries} times')
-            mailer.send_mail()
+            if email_bool: mailer.send_mail()
             logger.info(f'Sleeping for {sleep_timer} seconds.')
             sleep(sleep_timer)
         elif tracks and tries == 0:
@@ -44,11 +44,11 @@ def perform_news(config, mailer, remote, tries, sleep_timer):
             mailer.subject = 'Update Incomplete - Giving up'
             mailer.p('All files have not been update')
             mailer.p('Giving up.')
-            mailer.send_mail()
+            if email_bool: mailer.send_mail()
         else:
             logger.info('Update complete')
             mailer.subject = 'Update Complete'
             mailer.p('All files have been updated')
             mailer.p('Goodbye')
-            mailer.send_mail()
+            if email_bool: mailer.send_mail()
 
