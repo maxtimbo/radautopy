@@ -1,9 +1,9 @@
 import logging
-import posixpath
 import pathlib
 import requests
+import os
 
-from urllib.parse import urljoin
+from datetime import datetime
 
 from . import LOGGER_NAME
 from .utilities import make_dirs
@@ -19,36 +19,52 @@ class TTWN:
         self.affiliate = affiliate
         self.username = username
         self.password = password
-
-        self.affiliate_dir = make_dirs(pathlib.Path(ROOT_DIR, affiliate))
-
-        self.timestamp = self.get_timestamp()
-        self.remote_manifest = urljoin(self.url, posixpath.join(self.affiliate, 'filemanifest.txt'))
-
-
         self.remote_date_format = "%a, %d %b %Y %H:%M:%S GMT"
         self.local_date_format = "%Y%m%d%H%M%S"
 
-    def get_timestamp(self, new_timestamp: str = None) -> str:
-        existing_timestamp = self.affiliate_dir.glob('*.timestamp')
+        self.manifest = self.get_remote(os.path.join(self.url, self.affiliate, 'filemanifest.txt'))
+
+
+    @staticmethod
+    def probe_timestamp(timestamp_dir: pathlib.Path, new_timestamp: str = None) -> str:
+        existing_timestamp = [x for x in timestamp_dir.glob('*.timestamp')]
 
         if new_timestamp == None and not exiting_timestamp:
             default_timestamp = "20220325064459"
-            pathlib.Path(self.affiliate_dir, f'{default_timestamp}.timestamp').touch()
+            pathlib.Path(timestamp_dir, f'{default_timestamp}.timestamp').touch()
             return default_timestamp
         elif new_timestamp == None and existing_timestamp:
             return existing_timestamp[0].stem
         else:
             existing_timestamp.unlink()
-            pathlib.Path(self.affiliate_dir, f'{new_timestamp}.timestamp').touch()
+            pathlib.Path(timestamp_dir, f'{new_timestamp}.timestamp').touch()
             return new_timestamp
+
+    def header_timestamp(self, req):
+        return datetime.strptime(
+                req.headers['last-modified'],
+                self.remote_date_format
+            ).strftime(
+                self.local_date_format
+            )
 
     def get_remote(self, url):
         return requests.get(url, auth=HTTPBasicAuth(self.username, self.password), timeout=20)
 
-    def get_manifest(self, modified, local) -> bool:
+    def get_manifest(self, timestamp) -> str:
+        modified = self.header_timestamp(self.manifest)
 
-    def download_file(self, manifest):
-        lines = manifest.iter_lines(decode_unicode=True)
+        if modified > timestamp:
+            lines = self.manifest.iter_lines(decode_unicode=True)
+            for line in lines:
+                if "url" in line:
+                    url = line.split('=')[1].replace('"', '').strip()
+                    return url
+        else:
+            raise
+
+
+    def download_file(self, url: str, local: str):
+        self.get_remote(url)
 
 
