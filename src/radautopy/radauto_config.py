@@ -32,6 +32,7 @@ def list_configs():
 @click.option('--ftp', 'config_type', flag_value='ftp', help='FTP config')
 @click.option('--rclone', 'config_type', flag_value='cloud', help='rclone/cloud config')
 @click.option('--rss', 'config_type', flag_value='rss', help='rss config')
+@click.option('--ttwn', 'config_type', flag_value='ttwn', help='TTWN Config')
 @click.argument('config_file', type=click.Path(exists=False))
 def create(config_type, config_file):
     """
