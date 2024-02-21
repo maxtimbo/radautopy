@@ -177,8 +177,16 @@ class ConfigModify:
         self.config_dict['filemap'].append(track)
         self._next_continue(track)
 
+    def check_dirs(self, config: dict) -> None:
+        if 'dirs' in config:
+            for k, v in config['dirs'].items():
+                click.echo(f'Attempting to create {k}')
+                make_dirs(pathlib.Path(v))
+                click.echo(f'{v} created')
+
     def save_config(self, config: dict, config_file: pathlib.Path) -> None:
         try:
+            self.check_dirs(config)
             make_dirs(config_file.parents[0])
             with open(config_file, 'w', encoding='utf-8') as f:
                 json.dump(config, f, ensure_ascii=False, indent=4)

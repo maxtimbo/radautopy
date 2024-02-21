@@ -8,6 +8,7 @@ from .utils.cloud import RadCloud
 from .utils.ftp import RadFTP
 from .utils.mail import RadMail
 from .utils.rss import RadRSS
+from .utils.ttwn import TTWN
 
 @click.group()
 def create_modify():
@@ -86,6 +87,9 @@ def validate(config_file):
         elif 'rss' in config.job['job_type']:
             click.echo('rss')
             remote = RadRSS(**config.rss)
+        elif 'ttwn' in config.job['job_type']:
+            click.echo('ttwn')
+            remote = TTWN(**config.ttwn, timestamp_dir = config.dirs['audio_tmp'])
 
         remote.validate()
 

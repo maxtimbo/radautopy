@@ -37,7 +37,7 @@ class TTWN:
         elif new_timestamp == None and existing_timestamp:
             return existing_timestamp[0].stem
         else:
-            existing_timestamp.unlink()
+            existing_timestamp[0].unlink()
             pathlib.Path(self.timestamp_dir, f'{new_timestamp}.timestamp').touch()
             return new_timestamp
 
@@ -69,13 +69,16 @@ class TTWN:
         try:
             with open(local, 'wb') as audio:
                 audio.write(remote.content)
-            if int(remote.headers['content_length']) == os.stat(local).st_size:
-                self.probe_timestamp(self.header_timestamp(remote.headers['last-modified']))
+            if int(remote.headers['content-length']) == os.stat(local).st_size:
+                self.probe_timestamp(self.header_timestamp(remote))
                 return True
             else:
                 return False
         except Exception as e:
             logger.exception(e)
             return False
+
+    def validate(self):
+        print(f'{self.url = }')
 
 
