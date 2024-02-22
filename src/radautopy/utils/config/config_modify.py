@@ -6,7 +6,7 @@ import pathlib
 from copy import copy
 from tabulate import tabulate
 
-from . import CONFIG_DIR, EMAIL_CONFIG, DEFAULT_DIRS, DEFAULT_FILEMAP, CLOUD_CONFIG, JOB_METADATA, FTP_CONFIG, RSS_CONFIG
+from . import CONFIG_DIR, EMAIL_CONFIG, DEFAULT_DIRS, DEFAULT_FILEMAP, CLOUD_CONFIG, JOB_METADATA, FTP_CONFIG, RSS_CONFIG, TTWN_CONFIG
 from .config import ConfigJSON
 from .replace_fillers import ReplaceFillers
 from ..utilities import make_dirs, SafeDict
@@ -46,6 +46,8 @@ class ConfigModify:
                 self.config_dict = build_dict(CLOUD_CONFIG)
             elif 'rss' in config_type:
                 self.config_dict = build_dict(RSS_CONFIG)
+            elif 'ttwn' in config_type:
+                self.config_dict = build_dict(TTWN_CONFIG)
 
     def set_email(self, config: dict = EMAIL_CONFIG) -> None:
         conf = self.set_interactive(config)
@@ -175,8 +177,16 @@ class ConfigModify:
         self.config_dict['filemap'].append(track)
         self._next_continue(track)
 
+    def check_dirs(self, config: dict) -> None:
+        if 'dirs' in config:
+            for k, v in config['dirs'].items():
+                click.echo(f'Attempting to create {k}')
+                make_dirs(pathlib.Path(v))
+                click.echo(f'{v} created')
+
     def save_config(self, config: dict, config_file: pathlib.Path) -> None:
         try:
+            self.check_dirs(config)
             make_dirs(config_file.parents[0])
             with open(config_file, 'w', encoding='utf-8') as f:
                 json.dump(config, f, ensure_ascii=False, indent=4)

@@ -75,3 +75,12 @@ RSS_CONFIG = {
         "url": str,
     }
 }
+
+TTWN_CONFIG = {
+    "ttwn": {
+        "url": str,
+        "affiliate": str,
+        "username": str,
+        "password": str
+    }
+}
