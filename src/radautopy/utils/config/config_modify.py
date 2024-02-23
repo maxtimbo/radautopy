@@ -2,6 +2,7 @@ import click
 import datetime
 import json
 import pathlib
+import subprocess
 
 from copy import copy
 from tabulate import tabulate
@@ -30,6 +31,21 @@ def set_track(track: dict) -> dict:
 
 def build_dict(add_dict: dict) -> dict:
     return JOB_METADATA | add_dict | DEFAULT_DIRS | DEFAULT_FILEMAP
+
+def set_cronjob(job_config: dict, config_file: str | pathlib.Path) -> None:
+    config_file = config_file.name if isinstance(config_file, pathlib.Path) else config_file
+    cron = CronTab(user=True)
+
+    existing = cron.find_command(config_file)
+    if existing:
+        cron.remove(existing)
+
+    radautopy = subprocess.check_output('which radautopy', shell = True).strip().decode()
+    job = cron.new(command = f"{radautopy} {config_file} {job_config['job_runner']} {job_config['extra_args']}")
+    job.set_comment(job_config['job_name'])
+    job.setall(job_config['cron_expression'])
+    cron.write()
+
 
 class ConfigModify:
     def __init__(self, config_type: str = None, config_file: str = None) -> None:
@@ -76,13 +92,25 @@ class ConfigModify:
 
     def set_interactive(self, skel: dict) -> dict:
         for key in skel:
-            if not 'filemap' in key:
+            if 'filemap' in key:
+                self.filemap_wizard_select()
+            else:
                 click.echo(f'{"":=^50}\n{"Setting values for":=^50}\n{key:=^50}')
                 for subkey, subval in skel[key].items():
-                    click.echo(f'{subkey} = {subval}')
-                    skel[key][subkey] = click.prompt(f'Define {subkey}:', default=subval)
-            else:
-                self.filemap_wizard_select()
+                    if 'cron_expression' in subkey:
+                        click.echo('Visit https://crontab.guru for help setting your cron expression')
+
+                    if 'extra_args' in subkey:
+                        click.echo('Extra args for cronjob. See `radautopy --help` for more info. In most cases, this can be left blank')
+
+
+                    if 'job_type' in subkey:
+                        skel[key][subkey] = click.prompt(f'Define {subkey}:', type=click.Choice(['ftp', 'cloud', 'rss', 'ttwn']), default=subval)
+                    elif 'job_runner' in subkey:
+                        skel[key][subkey] = click.prompt(f'Define {subkey}:', type=click.Choice(['news', 'standard', 'split_single', 'ttwn']), default=subval)
+                    else:
+                        click.echo(f'{subkey} = {subval}')
+                        skel[key][subkey] = click.prompt(f'Define {subkey}:', default=subval)
 
         return skel
 
@@ -185,6 +213,7 @@ class ConfigModify:
                 make_dirs(pathlib.Path(v))
                 click.echo(f'{v} created')
 
+
     def save_config(self, config: dict, config_file: pathlib.Path) -> None:
         try:
             self.check_dirs(config)
@@ -196,6 +225,7 @@ class ConfigModify:
             if 'job' in config and click.confirm('Would you like to set the cronjob for this entry?'):
                 click.echo(config['job']['cron_expression'])
                 click.echo(config_file)
+                set_cronjob(config['job'], config_file)
         except Exception as e:
             click.echo(e)
 

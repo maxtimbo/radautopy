@@ -30,7 +30,9 @@ JOB_METADATA = {
         "job_name": str,
         "description": str,
         "job_type": str,
-        "cron_expression": str
+        "cron_expression": str,
+        "job_runner": str,
+        "extra_args": "",
     }
 }
 

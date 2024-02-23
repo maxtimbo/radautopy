@@ -2,6 +2,7 @@ import click
 
 from .utils.config import CONFIG_DIR
 from .utils.config.config_modify import ConfigModify
+from .utils.config.config_modify import set_cronjob as preform_set_cronjob
 from .utils.config.config import ConfigJSON
 
 from .utils.cloud import RadCloud
@@ -66,6 +67,16 @@ def modify(config_file):
         config = ConfigJSON(config_file)
         modify = ConfigModify(config_file = config.config_file)
         modify.set_config(config.config_dict)
+
+@create_modify.command()
+@click.argument('config_file')
+def set_cronjob(config_file):
+    """
+    Set cronjob for an existing config
+    """
+    config = ConfigJSON(config_file)
+    preform_set_cronjob(config.job, config_file)
+
 
 
 @create_modify.command()
