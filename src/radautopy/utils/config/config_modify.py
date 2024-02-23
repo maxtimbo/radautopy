@@ -5,6 +5,7 @@ import pathlib
 
 from copy import copy
 from tabulate import tabulate
+from crontab import CronTab
 
 from . import CONFIG_DIR, EMAIL_CONFIG, DEFAULT_DIRS, DEFAULT_FILEMAP, CLOUD_CONFIG, JOB_METADATA, FTP_CONFIG, RSS_CONFIG, TTWN_CONFIG
 from .config import ConfigJSON
@@ -190,6 +191,11 @@ class ConfigModify:
             make_dirs(config_file.parents[0])
             with open(config_file, 'w', encoding='utf-8') as f:
                 json.dump(config, f, ensure_ascii=False, indent=4)
+
+            click.echo('Job saved successfully')
+            if 'job' in config and click.confirm('Would you like to set the cronjob for this entry?'):
+                click.echo(config['job']['cron_expression'])
+                click.echo(config_file)
         except Exception as e:
             click.echo(e)
 
