@@ -24,7 +24,7 @@ logger = RadLogger(LOG_FILE).get_logger()
 
 @click.group()
 @click.option('-v', '--verbose', is_flag=True, help='enable verbose mode')
-@click.option('--disable_email', is_flag=True, help='disable email notification')
+@click.option('--disable_email', is_flag=True, help='disable email notification', default=True)
 @click.argument('config_file')
 @click.pass_context
 def cli(ctx, config_file, verbose, disable_email):
