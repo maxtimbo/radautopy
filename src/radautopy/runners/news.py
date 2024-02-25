@@ -8,7 +8,7 @@ from ..utils.audio import AudioFile
 
 logger = logging.getLogger(LOGGER_NAME)
 
-def perform_news(config, mailer, remote, email_bool, tries, sleep_timer):
+def perform_news(config, mailer, email_bool, remote, tries, sleep_timer):
     tracks = config.filemap
     while tracks and tries > 0:
         mailer.message = ""
