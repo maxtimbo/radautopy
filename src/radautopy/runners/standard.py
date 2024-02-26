@@ -11,7 +11,7 @@ def perform_standard(config, mailer, email_bool, remote):
         mailer.p('Download unsuccessful')
     for track in config.filemap:
         audio = AudioFile(track['input_file'], track['output_file'])
-        audio.apply_metadata(artist=track['artist'], title=track['title'], apply_input=True)
+        #audio.apply_metadata(artist=track['artist'], title=track['title'], apply_input=True)
         try:
             audio.move()
             mailer.append_table_data('moved to', track['output_file'])
