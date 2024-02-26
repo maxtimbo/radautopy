@@ -19,6 +19,9 @@ def calculate_values(iterator: int, segments: int) -> tuple:
     return hour, segment
 
 def set_track(track: dict) -> dict:
+    helper_table = [[filler, func(filler, filler)] for filler, func in ReplaceFillers('').filler_functions.items()]
+    click.echo('Here is a list of available variables:')
+    click.echo(tabulate(helper_table, headers=['Variable', 'Example Output'], tablefmt='simple_outline'))
     click.echo(tabulate([[k, v] for k, v in track.items()], tablefmt='simple_outline'))
     for k, v in track.items():
         track[k] = click.prompt(k, default=track[k])
@@ -167,12 +170,18 @@ class ConfigModify:
         segments = click.prompt('How many segments per hour?', type=int)
         iterator = hours * segments
 
+        allowed_variables = {'hour', 'segment', 'count'}
+        helper_table = [[filler, func(filler, filler)] for filler, func in ReplaceFillers('').filler_functions.items()]
+        for var in allowed_variables:
+            helper_table.append([var, '1'])
+
+        click.echo('Here is a list of available variables:')
+        click.echo(tabulate(helper_table, headers=['Variable', 'Example Output'], tablefmt='simple_outline'))
         input_pattern = click.prompt('Define an input pattern: ', type=str)
         output_pattern = click.prompt('Define an output pattern: ', type=str)
         artist_pattern = click.prompt('Define an artist pattern: ', type=str)
         title_pattern = click.prompt('Define a title pattern: ', type=str)
 
-        allowed_variables = {'hour', 'segment', 'count'}
         filemap = []
 
         for count in range(1, iterator + 1):
