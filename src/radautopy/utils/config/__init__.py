@@ -65,6 +65,15 @@ FTP_CONFIG = {
     }
 }
 
+SFTP_CONFIG = {
+    "SFTP": {
+        "server": str,
+        "username": str,
+        "password": str,
+        "directory": "",
+    }
+}
+
 CLOUD_CONFIG = {
     "cloud": {
         "server": str,

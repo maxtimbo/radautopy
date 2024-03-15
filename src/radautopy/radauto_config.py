@@ -7,6 +7,7 @@ from .utils.config.config import ConfigJSON
 
 from .utils.cloud import RadCloud
 from .utils.ftp import RadFTP
+from .utils.sftp import RadSFTP
 from .utils.mail import RadMail
 from .utils.rss import RadRSS
 from .utils.ttwn import TTWN
@@ -32,6 +33,7 @@ def list_configs():
 
 @create_modify.command()
 @click.option('--ftp', 'config_type', flag_value='ftp', help='FTP config')
+@click.option('--sftp', 'config_type', flag_value='sftp', help='SFTP config')
 @click.option('--rclone', 'config_type', flag_value='cloud', help='rclone/cloud config')
 @click.option('--rss', 'config_type', flag_value='rss', help='rss config')
 @click.option('--ttwn', 'config_type', flag_value='ttwn', help='TTWN Config')
@@ -91,15 +93,15 @@ def validate(config_file):
         mailer.validate()
     else:
         config = ConfigJSON(config_file)
-        if 'ftp' in config.job['job_type']:
+        if 'ftp' == config.job['job_type']:
             remote = RadFTP(**config.FTP)
-        elif 'cloud' in config.job['job_type']:
+        elif 'sftp' == config.job['job_type']:
+            remote = RadSFTP(**config.SFTP)
+        elif 'cloud' == config.job['job_type']:
             remote = RadCloud(**config.cloud)
-        elif 'rss' in config.job['job_type']:
-            click.echo('rss')
+        elif 'rss' == config.job['job_type']:
             remote = RadRSS(**config.rss)
-        elif 'ttwn' in config.job['job_type']:
-            click.echo('ttwn')
+        elif 'ttwn' == config.job['job_type']:
             remote = TTWN(**config.ttwn, timestamp_dir = config.dirs['audio_tmp'])
 
         remote.validate()

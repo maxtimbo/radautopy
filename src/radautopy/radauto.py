@@ -7,6 +7,7 @@ from .utils.config.config import ConfigJSON
 
 from .utils.audio import AudioFile
 from .utils.ftp import RadFTP
+from .utils.sftp import RadSFTP
 from .utils.cloud import RadCloud
 from .utils.rss import RadRSS
 from .utils.ttwn import TTWN
@@ -39,13 +40,15 @@ def cli(ctx, config_file, verbose, disable_email):
     ctx.obj['email_bool'] = disable_email
 
     job_type = config.job['job_type']
-    if 'ftp' in job_type:
+    if 'ftp' == job_type:
         ctx.obj['remote'] = RadFTP(**config.FTP)
-    elif 'cloud' in job_type:
+    if 'sftp' == job_type:
+        ctx.obj['remote'] = RadSFTP(**config.SFTP)
+    elif 'cloud' == job_type:
         ctx.obj['remote'] = RadCloud(**config.cloud)
-    elif 'rss' in job_type:
+    elif 'rss' == job_type:
         ctx.obj['remote'] = RadRSS(**config.rss)
-    elif 'ttwn' in job_type:
+    elif 'ttwn' == job_type:
         ctx.obj['remote'] = TTWN(**config.ttwn, timestamp_dir = config.dirs['audio_tmp'])
 
 @cli.command()

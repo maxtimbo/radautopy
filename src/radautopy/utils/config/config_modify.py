@@ -8,7 +8,7 @@ from copy import copy
 from tabulate import tabulate
 from crontab import CronTab
 
-from . import CONFIG_DIR, EMAIL_CONFIG, DEFAULT_DIRS, DEFAULT_FILEMAP, CLOUD_CONFIG, JOB_METADATA, FTP_CONFIG, RSS_CONFIG, TTWN_CONFIG
+from . import CONFIG_DIR, EMAIL_CONFIG, DEFAULT_DIRS, DEFAULT_FILEMAP, CLOUD_CONFIG, JOB_METADATA, FTP_CONFIG, SFTP_CONFIG, RSS_CONFIG, TTWN_CONFIG
 from .config import ConfigJSON
 from .replace_fillers import ReplaceFillers
 from ..utilities import make_dirs, SafeDict
@@ -62,6 +62,8 @@ class ConfigModify:
         if config_type is not None:
             if 'ftp' in config_type:
                 self.config_dict = build_dict(FTP_CONFIG)
+            elif 'sftp' in config_type:
+                self.config_dict = build_dict(SFTP_CONFIG)
             elif 'cloud' in config_type:
                 self.config_dict = build_dict(CLOUD_CONFIG)
             elif 'rss' in config_type:
