@@ -10,6 +10,7 @@ import sys
 import traceback
 
 import taglib
+from cart_chunk import CartChunk, NewCart
 
 from . import LOGGER_NAME
 
@@ -77,34 +78,29 @@ class AudioFile:
         logger.debug(f'Running command: {subprocess.list2cmdline(cmd_line)}')
         return subprocess.Popen(cmd_line, *args, **kwargs)
 
-    def apply_metadata(self, artist: str, title: str, apply_today: bool = False, apply_input: bool = True) -> None:
-        audio = self._check_output(apply_input)
+    def apply_metadata(self, artist: str, title: str) -> None:
+        self.convert()
 
-        if apply_today:
-            today = datetime.datetime.today()
-            today = today.strftime("%Y%m%d")
-        else:
-            today = ''
+        wav = CartChunk(self.input_file)
+        new_wav = NewCart(self.input_file, artist, title)
+        wav.write_copy(new_wav)
 
-        with taglib.File(audio, save_on_exit=True) as cut:
-            cut.tags["ARTIST"] = f"{artist} {today}"
-            cut.tags["TITLE"] = title
-
-    def convert(self) -> None:
-        if not hasattr(self, 'output_file'):
-            self.output_file = self.input_file.with_suffix(".mp3")
+    def convert(self) -> pathlib.Path:
+        output = pathlib.Path(self.input_file.with_stem(self.input_file.stem + '_CONVERTING').with_suffix('.wav'))
         try:
-            out, err = (ffmpeg
+            err, out = (ffmpeg
                         .input(str(self.input_file))
-                        .output(str(self.output_file))
+                        .output(str(output))
                         .overwrite_output()
                         .run(capture_stdout = True, capture_stderr = True)
             )
             logger.debug(out)
+            logger.debug(err)
+            self.input_file.unlink()
+            self.input_file = self.input_file.with_suffix('.wav')
+            shutil.move(output, self.input_file)
         except ffmpeg.Error as e:
             logger.exception(e)
-            logger.error(err)
-            logger.error(out)
 
     def analyse(self, blocksize: int = 65536, apply_input: bool = True) -> None:
         audio = self._check_output(apply_input)
