@@ -60,15 +60,15 @@ class ConfigModify:
             self.config_file: pathlib.Path = pathlib.Path(CONFIG_DIR, config_file)
 
         if config_type is not None:
-            if 'ftp' in config_type:
+            if 'ftp' == config_type:
                 self.config_dict = build_dict(FTP_CONFIG)
-            elif 'sftp' in config_type:
+            elif 'sftp' == config_type:
                 self.config_dict = build_dict(SFTP_CONFIG)
-            elif 'cloud' in config_type:
+            elif 'cloud' == config_type:
                 self.config_dict = build_dict(CLOUD_CONFIG)
-            elif 'rss' in config_type:
+            elif 'rss' == config_type:
                 self.config_dict = build_dict(RSS_CONFIG)
-            elif 'ttwn' in config_type:
+            elif 'ttwn' == config_type:
                 self.config_dict = build_dict(TTWN_CONFIG)
 
     def set_email(self, config: dict = EMAIL_CONFIG) -> None:

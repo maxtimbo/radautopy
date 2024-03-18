@@ -51,9 +51,29 @@ Using `radauto-config create MyCoolShow.json [job type, see below]` will create 
 > [!TIP]
 > `rclone` job type must be setup using rclone prior to running this script
 
+Once created, you can use `radauto-config list-configs` to show a list of configs in `~/radautopy/configs`. You can also use `radauto-config modify [job_name.json]` to alter an existing config (do not include a job file to modify the global email config). You can also use `radauto-config validate [job_name.json]` to validate an existing job (once again, leave out the job file to validate the email config).
+
+Finally, if you set the cron settings for your job, you can use `radauto-config set-cronjob [job_name.json]` to create a cron entry.
+
+All json files can be edited using your favorite text editor. Just be sure that all entries are still in place following the examples below. You can add or remove any `"email": {}` entries to a job as these are email setting overrides.
+
 #### Filemaps
 
+During the job configuration prompts, you will be presented with three options for filemap creation:
+
+- individual track edit
+ - Allows you to select an idividual track to edit
+- filemap wizard
+ - Add filemaps one by one
+- quick show wizard
+ - quickly create an entire show filemap following the prompts
+
 #### Usage
+
+You can test your config by using `radautopy [job_name.json] [job_type] {optional_extra_args}`  
+If you created a cron entry, it will run automatically at the specified time.
+
+You can check the log output of all jobs in `~/radautopy/log/radautopy.log`
 
 ### Config Templates
 
@@ -75,6 +95,15 @@ Using `radauto-config create MyCoolShow.json [job type, see below]` will create 
   }
 }
 ```
+
+> [!NOTE]
+> ```
+> "email: {
+>   "recipient":
+> }
+> ```
+> can either be a single address: "eaxample@test.com" or a list:
+> `["example1@test.com", "example2@test.com"]
 
 #### Example FTP Config
 
