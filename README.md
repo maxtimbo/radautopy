@@ -105,6 +105,42 @@ You can check the log output of all jobs in `~/radautopy/log/radautopy.log`
 > can either be a single address: `"eaxample@test.com"` or a list:
 > `["example1@test.com", "example2@test.com"]`
 
+> [!TIP]
+> You can add any of these email settings to a job config to override the global defaults. For example:
+> 
+> ```
+> {
+>   "job": {
+>     "job_name": "My Cool job",
+>     "description": "Daily show thats cool",
+>     "job_type": "cloud",
+>     "cron_expression": "00 04 * * *"
+>   },
+>   "cloud": {
+>     "server": "CShow",
+>     "directory": ""
+>   },
+>   "dirs": {
+>     "download_dir": "/path/to/download",
+>     "export_dir": "/path/to/export",
+>     "audio_tmp": "/path/to/tmp"
+>   },
+>   "filemap": [
+>     {
+>       "input_file": "audio.mp3",
+>       "output_file": "audio.wav",
+>       "artist": "Cool Show {now}",
+>       "title": "{month}{day}{year}-{week}"
+>     }
+>   ],
+>   "email": {
+>     "sender": "OVERIDE SENDER",
+>     "subject": "OVERRIDE SUBJECT",
+>     "recipient": ["override@r1.com", "override2@r2.com"]
+>   }
+> }
+> ```
+
 #### Job Metadata
 ```
 {
