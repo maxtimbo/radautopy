@@ -12,9 +12,13 @@ Install dependencies:
 $ sudo apt install rclone ffmpeg -y
 ```
 
-Install `radautopy`:
+Clone this repo and install via pip:
 
-`pip install radautopy`
+```
+$ git clone https://github.com/maxtimbo/radautopy.git
+$ cd radautopy
+$ pip install .
+```
 
 
 ### Initial Setup
