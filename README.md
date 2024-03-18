@@ -38,18 +38,18 @@ Once the initial email config is built, you will be prompted to create the show 
 
 Once the initial configuration is done, you can modify it either using the cli tool or you can edit the json file directly.
 
+> [!WARNING]
+> I will need to update these instructions. They are incorrect.
+
+
 #### Filemaps
 
 > [!TIP]
-> Use `radautopy modify --[ftp | rclone | http] {CONFIG.json} --filemap` to create the filemap config.
+> Use `radauto-config modify --[ftp | rclone | http] {CONFIG.json} --filemap` to create the filemap config.
 
 You can choose one of `Individual track edit | Filemap wizard | Quick Show Wizard`.
 
 If you have a show that follows a pattern of hour/segment, use the `Quick Show Wizard`. The `Filemap Wizard` can be used if you just need to iterate from 0 to n or from 1 to n. Once you have a filemap and need to make any adjustments, use either `Filemap Wizard` to iterate all files in the `filemap` or use `Individual track edit` to choose just one track to edit.
-
-> [!NOTE]
-> **TODO**
-> Make Config creation and validation an entirely different cli tool
 
 #### Usage
 
