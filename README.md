@@ -23,6 +23,34 @@ $ pip install .
 
 ### Initial Setup
 
+Installing creates two cli tools. `radauto-config` and `radautopy`.  
+`radauto-config` will allow you to quckly create configs for shows and other jobs. The initial run will create a new directory tree in your user home:
+
+```
+~/radautopy/
+├── audio_tmp
+├── config
+├── download
+├── export
+└── log
+```
+
+Using `radauto-config create MyCoolShow.json [job type, see below]` will create an `email.json` global email config file as well as `MyCoolShow.json`. Follow the prompts and fill in all the information.
+
+> [!WARNING]
+> All passwords are stored plaintext. Please keep this in mind when using this script.
+
+> [!INFO]
+> The following job types have been added:
+> - ftp
+> - sftp
+> - rclone
+> - rss
+> - ttwn
+
+> [!INFO]
+> `rclone` job type must be setup using rclone prior to running this script
+
 #### Filemaps
 
 #### Usage
