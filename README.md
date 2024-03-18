@@ -102,8 +102,22 @@ You can check the log output of all jobs in `~/radautopy/log/radautopy.log`
 >   "recipient":
 > }
 > ```
-> can either be a single address: "eaxample@test.com" or a list:
-> `["example1@test.com", "example2@test.com"]
+> can either be a single address: `"eaxample@test.com"` or a list:
+> `["example1@test.com", "example2@test.com"]`
+
+#### Job Metadata
+```
+{
+  "job": {
+    "job_name": str,
+    "description": str,
+    "job_type": str,
+    "cron_expression": str,
+    "job_runner": str,
+    "extra_args": "",
+  }
+}
+```
 
 #### Example FTP Config
 
@@ -114,6 +128,19 @@ You can check the log output of all jobs in `~/radautopy/log/radautopy.log`
     "username": str,
     "password": str,
     "pasv": boolean,
+    "directory": str
+  }
+}
+```
+
+#### Example SFTP Config
+
+```
+{
+  "SFTP": {
+    "server": str,
+    "username": str,
+    "password": str,
     "directory": str
   }
 }
@@ -130,36 +157,17 @@ You can check the log output of all jobs in `~/radautopy/log/radautopy.log`
 }
 ```
 
-
-#### Example HTTP Config
-
-> [!NOTE]
-> HTTP has not yet been implemented
-
+#### TTWN Config
 ```
 {
-  "http": {
-    "url": str
+  "ttwn": {
+    "url": str,
+    "affiliate": str,
+    "username": str,
+    "password": str
   }
 }
 ```
-
-##### Silence Settings
-
-These settings are for the split silence function.
-
-> [!NOTE]
-> Not yet implemented
-
-```
-{
-  "silence": {
-    "threshold": -60,
-    "duration": 15
-  }
-}
-```
-
 
 #### Directories
 
