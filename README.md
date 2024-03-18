@@ -40,7 +40,7 @@ Using `radauto-config create MyCoolShow.json [job type, see below]` will create 
 > [!WARNING]
 > All passwords are stored plaintext. Please keep this in mind when using this script.
 
-> [!INFO]
+> [!NOTE]
 > The following job types have been added:
 > - ftp
 > - sftp
@@ -48,7 +48,7 @@ Using `radauto-config create MyCoolShow.json [job type, see below]` will create 
 > - rss
 > - ttwn
 
-> [!INFO]
+> [!TIP]
 > `rclone` job type must be setup using rclone prior to running this script
 
 #### Filemaps
