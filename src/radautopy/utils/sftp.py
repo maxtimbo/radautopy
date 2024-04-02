@@ -55,11 +55,8 @@ class RadSFTP:
         return files
 
     def download_file(self, remote_file: str, local_file: pathlib.Path | str) -> None:
-        try:
-            self.sftp.get(remote_file, local_file)
-            logger.info(f"Downloaded {remote_file} as {local_file}")
-        except Exception as e:
-            logger.exception(e)
+        self.sftp.get(remote_file, local_file)
+        logger.info(f"Downloaded {remote_file} as {local_file}")
 
     def download_files(self, file_map: list[tuple]) -> None:
         for f in file_map:

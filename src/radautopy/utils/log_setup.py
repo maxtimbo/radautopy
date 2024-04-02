@@ -22,7 +22,7 @@ class RadLogger:
         disable_existing_loggers=False,
         formatters={
             'precise': {
-                'format': '%(asctime)s %(levelname)s:~ %(filename)s - %(module)s - %(funcName)s ~: %(message)s',
+                'format': '%(asctime)s %(levelname)s:~ %(filename)s - %(module)s - fn=%(funcName)s ~: %(message)s',
                 'datefmt': '%Y%m%d %H:%M:%S'
             },
             'brief': {
@@ -48,7 +48,7 @@ class RadLogger:
         loggers={
             logger_name: {
                 'handlers': ['file_handler'],
-                'level': 'INFO',
+                'level': 'DEBUG',
                 'propagate': False
             }
         }
@@ -70,6 +70,8 @@ class RadLogger:
         if verbose:
             self.LOGGING_CONFIG['loggers'][self.logger_name]['handlers'].append('stream')
             self.LOGGING_CONFIG['loggers'][LOGGER_NAME]['handlers'].append('stream')
+            self.LOGGING_CONFIG['loggers'][self.logger_name]['level'] = 'DEBUG'
+            self.LOGGING_CONFIG['loggers'][LOGGER_NAME]['level'] = 'DEBUG'
 
         self.logging_conf = logging.config.dictConfig(self.LOGGING_CONFIG)
         self.logger = logging.getLogger(self.logger_name)

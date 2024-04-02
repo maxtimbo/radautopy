@@ -87,52 +87,43 @@ class AudioFile:
 
     def convert(self) -> pathlib.Path:
         output = pathlib.Path(self.input_file.with_stem(self.input_file.stem + '_CONVERTING').with_suffix('.wav'))
-        try:
-            err, out = (ffmpeg
-                        .input(str(self.input_file))
-                        .output(str(output))
-                        .overwrite_output()
-                        .run(capture_stdout = True, capture_stderr = True)
-            )
-            logger.debug(out)
-            logger.debug(err)
-            self.input_file.unlink()
-            self.input_file = self.input_file.with_suffix('.wav')
-            shutil.move(output, self.input_file)
-        except ffmpeg.Error as e:
-            logger.exception(e)
+        converted = str(self.input_file.with_suffix('.wav'))
+        err, out = (ffmpeg
+                    .input(str(self.input_file))
+                    .output(str(output))
+                    .overwrite_output()
+                    .run(capture_stdout = True, capture_stderr = True)
+        )
+        logger.debug(f'{out = }')
+        logger.debug(f'{err = }')
+        self.input_file.unlink()
+        logger.debug(f'moving {output} to {converted}')
+        shutil.move(output, converted)
+        self.input_file = converted
+        logger.debug('move complete')
 
     def analyse(self, blocksize: int = 65536, apply_input: bool = True) -> None:
         audio = self._check_output(apply_input)
         logger.debug(f'analysing audio {audio}')
         hasher = hashlib.sha256()
-        try:
-            with open(audio, 'rb') as f:
-                for block in iter(lambda: f.read(blocksize), b""):
-                    hasher.update(block)
-            self.hash = hasher.hexdigest()
-            logger.debug(f'{audio} hash: {self.hash}')
-            return self.hash
-        except Exception as exc:
-            logger.exception(Exception(traceback.format_exc()))
+        with open(audio, 'rb') as f:
+            for block in iter(lambda: f.read(blocksize), b""):
+                hasher.update(block)
+        self.hash = hasher.hexdigest()
+        logger.debug(f'{audio} hash: {self.hash}')
+        return self.hash
 
     def copy(self, copy_file: pathlib.Path | str, apply_input: bool = True) -> None:
         audio_in = self._check_output(apply_input)
         audio_copy = self.force_path(copy_file)
-        try:
-            shutil.copy(audio_in, audio_copy)
-            logger.debug(f'Copied {audio_in} to {audio_copy}')
-        except Exception as e:
-            logger.exception(Exception(traceback.format_exc()))
+        shutil.copy(audio_in, audio_copy)
+        logger.debug(f'Copied {audio_in} to {audio_copy}')
 
     def move(self, new_filename: pathlib.Path | str = None, apply_input: bool = True) -> None:
         audio_in = self._check_output(apply_input)
         audio_out = self._create_output(new_filename)
-        try:
-            shutil.move(audio_in, audio_out)
-            logger.debug(f'Moved {audio_in} to {audio_out}')
-        except Exception as e:
-            logger.exception(Exception(traceback.format_exc()))
+        shutil.move(audio_in, audio_out)
+        logger.debug(f'Moved {audio_in} to {audio_out}')
 
     def split_silence(self, threshold: int = -60, duration: int = 10) -> list:
         silence_start_re = re.compile(r' silence_start: (?P<start>[0-9]+(\.?[0-9]*))$')

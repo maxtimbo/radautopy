@@ -63,20 +63,11 @@ class RadFTP:
         return files
 
     def download_file(self, remote_file: str, local_file: pathlib.Path | str):
-        try:
-            self.ftp.nlst(remote_file)
-            with open(local_file, 'wb') as f:
-                self.ftp.retrbinary('RETR ' + remote_file, f.write, 1024)
+        self.ftp.nlst(remote_file)
+        with open(local_file, 'wb') as f:
+            self.ftp.retrbinary('RETR ' + remote_file, f.write, 1024)
 
-            logger.info(f"Downloaded {remote_file} as {local_file}")
-        except Exception as e:
-            if str(e) == '550 The system cannot find the file specified. ':
-                logger.exception(e)
-
-            elif str(e) == '421 Control connection timed out ':
-                logger.exception(e)
-            else:
-                logger.exception(e)
+        logger.info(f"Downloaded {remote_file} as {local_file}")
 
     def download_files(self, file_map: list[tuple]):
         for f in file_map:
