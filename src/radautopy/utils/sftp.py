@@ -11,7 +11,7 @@ logger = logging.getLogger(LOGGER_NAME)
 
 
 class RadSFTP:
-    def __init__(self, server: str, username: str, password: str, directory: str = None) -> None:
+    def __init__(self, server: str, username: str, password: str, directory: str | None = None) -> None:
         self.server = server
         self.username = username
         self.password = password
@@ -43,7 +43,7 @@ class RadSFTP:
         except:
             click.echo('~~ SFTP Connection Failed! ~~')
 
-    def list_remote(self, filename: str = None) -> list:
+    def list_remote(self, filename: str | None = None) -> list[str]:
         files = []
         try:
             files = self.sftp.listdir(path='.')
@@ -58,7 +58,7 @@ class RadSFTP:
         self.sftp.get(remote_file, local_file)
         logger.info(f"Downloaded {remote_file} as {local_file}")
 
-    def download_files(self, file_map: list[tuple]) -> None:
+    def download_files(self, file_map: list[tuple[str, pathlib.Path | str]]) -> None:
         for f in file_map:
             remote, local = f
             self.do_action(self.download_file, remote_file=remote, local_file=local)

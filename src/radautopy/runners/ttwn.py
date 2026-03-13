@@ -2,13 +2,15 @@ import logging
 
 from ..utils.audio import AudioFile
 from ..utils.config import ROOT_DIR
+from ..utils.config.config import ConfigJSON
+from ..utils.mail import RadMail
 from ..utils.utilities import handle_status_code
 
 from . import LOGGER_NAME
 
 logger = logging.getLogger(LOGGER_NAME)
 
-def perform_ttwn(config, mailer, email_bool, remote):
+def perform_ttwn(config: ConfigJSON, mailer: RadMail, email_bool: bool, remote) -> None:
     try:
         file_urls = remote.get_file_urls()
     except Exception as e:
