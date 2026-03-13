@@ -3,13 +3,7 @@ import pathlib
 import requests
 import os
 
-from requests.auth import HTTPBasicAuth
-from datetime import datetime
-
 from . import LOGGER_NAME
-from .utilities import make_dirs
-from .config import ROOT_DIR
-
 
 logger = logging.getLogger(LOGGER_NAME)
 

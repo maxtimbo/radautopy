@@ -7,7 +7,13 @@ from ..utils.mail import RadMail
 
 logger = logging.getLogger(LOGGER_NAME)
 
-def perform_standard(config: ConfigJSON, mailer: RadMail, email_bool: bool, remote) -> None:
+def perform_standard(
+        config: ConfigJSON,
+        mailer: RadMail,
+        email_bool: bool,
+        remote
+    ) -> None:
+
     config.concat_directories_filemap()
     downloads = [(x['input_file'].name, x['input_file']) for x in config.filemap]
     logger.info(f'{downloads = }')

@@ -10,13 +10,19 @@ from . import LOGGER_NAME
 
 logger = logging.getLogger(LOGGER_NAME)
 
-def perform_ttwn(config: ConfigJSON, mailer: RadMail, email_bool: bool, remote) -> None:
+def perform_ttwn(
+        config: ConfigJSON,
+        mailer: RadMail,
+        email_bool: bool,
+        remote
+    ) -> None:
+
     try:
         file_urls = remote.get_file_urls()
     except Exception as e:
         logger.critical(f"Could not get file list: {e}")
         mailer.p('Could not get file list')
-        mailer.send_email(alt_subject='TTWN: An error occurred')
+        mailer.send_mail(alt_subject='TTWN: An error occurred')
         return
 
     if not file_urls:

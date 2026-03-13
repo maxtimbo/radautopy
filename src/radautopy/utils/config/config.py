@@ -2,15 +2,12 @@ import json
 import logging
 import pathlib
 
-from copy import deepcopy, copy
-from tabulate import tabulate
+from copy import deepcopy
 
 from . import CONFIG_DIR, LOGGER_NAME, EMAIL_CONFIG, DEFAULT_DIRS, DEFAULT_FILEMAP
 from .replace_fillers import ReplaceFillers
-from ..utilities import make_dirs, SafeDict
 
 logger = logging.getLogger(LOGGER_NAME)
-
 
 class ConfigJSON:
     def __init__(self, config_file: str | None = None) -> None:

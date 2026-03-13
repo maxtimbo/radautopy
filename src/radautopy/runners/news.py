@@ -5,12 +5,20 @@ from time import sleep
 
 from . import LOGGER_NAME
 from ..utils.audio import AudioFile
-from ..utils.config.config import ConfigJson
+from ..utils.config.config import ConfigJSON
 from ..utils.mail import RadMail
 
 logger = logging.getLogger(LOGGER_NAME)
 
-def perform_news(config: ConfigJson, mailer: RadMail, email_bool: bool, remote, tries: int, sleep_timer: int) -> None:
+def perform_news(
+        config: ConfigJSON,
+        mailer: RadMail,
+        email_bool: bool,
+        remote,
+        tries: int,
+        sleep_timer: int
+    ) -> None:
+
     tracks = config.filemap
     while tracks and tries > 0:
         mailer.message = ""

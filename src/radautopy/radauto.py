@@ -41,7 +41,7 @@ def cli(ctx: click.Context, config_file: str, verbose: bool, disable_email:bool)
     job_type = config.job['job_type']
     if 'ftp' == job_type:
         ctx.obj['remote'] = RadFTP(**config.FTP)
-    if 'sftp' == job_type:
+    elif 'sftp' == job_type:
         ctx.obj['remote'] = RadSFTP(**config.SFTP)
     elif 'cloud' == job_type:
         ctx.obj['remote'] = RadCloud(**config.cloud)

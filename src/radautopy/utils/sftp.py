@@ -1,6 +1,5 @@
 import click
 import logging
-import traceback
 import pathlib
 
 import paramiko

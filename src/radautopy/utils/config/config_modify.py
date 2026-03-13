@@ -1,5 +1,4 @@
 import click
-import datetime
 import json
 import pathlib
 import subprocess

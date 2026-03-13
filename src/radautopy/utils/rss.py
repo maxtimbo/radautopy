@@ -1,7 +1,6 @@
 import click
 import feedparser
 import logging
-import lxml
 import requests
 import wget
 
