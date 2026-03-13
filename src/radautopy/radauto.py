@@ -49,7 +49,7 @@ def cli(ctx, config_file, verbose, disable_email):
     elif 'rss' == job_type:
         ctx.obj['remote'] = RadRSS(**config.rss)
     elif 'ttwn' == job_type:
-        ctx.obj['remote'] = TTWN(**config.ttwn, timestamp_dir = config.dirs['audio_tmp'])
+        ctx.obj['remote'] = TTWN(**config.ttwn)
 
 @cli.command()
 @click.option('-t', '--tries', type=int, default=1, help='define number of tries')
