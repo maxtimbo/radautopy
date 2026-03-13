@@ -35,7 +35,7 @@ class TTWN:
 
         return [line.strip() for line in response.text.splitlines() if line.strip()]
 
-    def download_file(self, file_url: str, local_path) -> bool:
+    def download_file(self, file_url: str, local_path: pathlib.Path | str) -> bool:
         """Download an audio file from the API.
 
         The API returns a 302 redirect to a signed CloudFront URL.
@@ -61,7 +61,7 @@ class TTWN:
             logger.exception(e)
             return False
 
-    def validate(self):
+    def validate(self) -> None:
         """Test the API connection."""
         url = f"{self.url}/audio/{self.affiliate}/newFiles"
         response = requests.get(url, headers=self.headers, timeout=30)

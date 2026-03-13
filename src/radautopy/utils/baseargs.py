@@ -7,7 +7,7 @@ from . import LOGGER_NAME
 logger = logging.getLogger(LOGGER_NAME)
 
 class BaseArgs:
-    def __init__(self, varis: dict, runner_args: list[tuple] = None) -> None:
+    def __init__(self, varis: dict, runner_args: list[tuple] | None = None) -> None:
         program, helptext = varis.values()
         helptext = helptext + "\nConfig files are stored in ~/radautopy/config by default."
         self.validators: list = []
@@ -32,11 +32,11 @@ class BaseArgs:
         validate = subparsers.add_parser('validate')
         validate.add_argument('-l', '--list_remote', help='list remote files.', action='store_true')
 
-    def get_args(self) -> argparse.ArgumentParser:
+    def get_args(self) -> argparse.Namespace:
         self.args = self.parser.parse_args()
         return self.args
 
-    def builtins(self):
+    def builtins(self) -> None:
         if self.args.edit_config:
             self.args.config.edit_config()
 

@@ -13,7 +13,7 @@ logger = logging.getLogger(LOGGER_NAME)
 
 
 class ConfigJSON:
-    def __init__(self, config_file: str = None) -> None:
+    def __init__(self, config_file: str | None = None) -> None:
         self.email_config: pathlib.Path = pathlib.Path(CONFIG_DIR, "email.json")
         if self.email_config.exists():
             self.email_dict = self._parse_json(self.email_config)
@@ -37,7 +37,7 @@ class ConfigJSON:
         except Exception as e:
             logger.exception(e)
 
-    def concat_directories_filemap(self):
+    def concat_directories_filemap(self) -> None:
         for i, track in enumerate(self.filemap):
             self.filemap[i]['input_file'] = pathlib.Path(self.dirs['download_dir'], track['input_file'])
             self.filemap[i]['output_file'] = pathlib.Path(self.dirs['export_dir'], track['output_file'])

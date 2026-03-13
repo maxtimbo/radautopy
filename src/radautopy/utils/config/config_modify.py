@@ -8,12 +8,24 @@ from copy import copy
 from tabulate import tabulate
 from crontab import CronTab
 
-from . import CONFIG_DIR, EMAIL_CONFIG, DEFAULT_DIRS, DEFAULT_FILEMAP, CLOUD_CONFIG, JOB_METADATA, FTP_CONFIG, SFTP_CONFIG, RSS_CONFIG, TTWN_CONFIG
+from . import (
+        CONFIG_DIR,
+        EMAIL_CONFIG,
+        DEFAULT_DIRS,
+        DEFAULT_FILEMAP,
+        CLOUD_CONFIG,
+        JOB_METADATA,
+        FTP_CONFIG,
+        SFTP_CONFIG,
+        RSS_CONFIG,
+        TTWN_CONFIG,
+)
+
 from .config import ConfigJSON
 from .replace_fillers import ReplaceFillers
 from ..utilities import make_dirs, SafeDict
 
-def calculate_values(iterator: int, segments: int) -> tuple:
+def calculate_values(iterator: int, segments: int) -> tuple[int, int]:
     hour = (iterator - 1) // segments + 1
     segment = (iterator - 1) % segments + 1
     return hour, segment
@@ -75,7 +87,7 @@ class ConfigModify:
         conf = self.set_interactive(config)
         self.save_config(conf, self.email_config)
 
-    def set_config(self, config: dict = None) -> None:
+    def set_config(self, config: dict | None = None) -> None:
         if config is None:
             config = self.config_dict
         else:

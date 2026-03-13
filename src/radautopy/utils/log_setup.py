@@ -7,7 +7,7 @@ from logging.handlers import RotatingFileHandler
 from . import LOGGER_NAME
 from .utilities import make_dirs
 
-def get_logger(logger: str = LOGGER_NAME) -> None:
+def get_logger(logger: str = LOGGER_NAME) -> logging.Logger:
     return logging.getLogger(logger)
 
 
@@ -77,7 +77,7 @@ class RadLogger:
     def get_logger(logger_name: str = LOGGER_NAME) -> logging.Logger:
         return logging.getLogger(logger_name)
 
-    def set_level(self, level):
+    def set_level(self, level: int) -> None:
         self.logger.setLevel(level)
 
 

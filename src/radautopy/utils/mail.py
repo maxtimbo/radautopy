@@ -26,7 +26,7 @@ class Attachment:
             self.mime_type = self.get_mime(subtype)
             self.subtype = subtype
 
-    def get_mime(self, mime_type: str) -> MIMEAudio | MIMEApplication:
+    def get_mime(self, mime_type: str) -> type[MIMEAudio] | type[MIMEApplication]:
         if mime_type == "mp3":
             logger.debug(f"Using MIMEaudio")
             return MIMEAudio
