@@ -1,4 +1,3 @@
-import datetime
 import logging
 import ffmpeg
 import hashlib
@@ -43,7 +42,7 @@ class AudioFile:
             return None
 
     @output_file.setter
-    def output_file(self, output_file: pathlib.Path | str) -> None:
+    def output_file(self, output_file: pathlib.Path | str | None) -> None:
         if output_file is not None:
             output_file = self.force_path(output_file)
             if output_file.is_dir():
@@ -60,7 +59,7 @@ class AudioFile:
         else:
             return f
 
-    def _create_output(self, new_filename: pathlib.Path | str = None) -> pathlib.Path:
+    def _create_output(self, new_filename: pathlib.Path | str | None = None) -> pathlib.Path:
         if not hasattr(self, '_output_file') and not new_filename:
             raise NameError("Either an output_file or a new_filename must be specified")
         elif not hasattr(self, '_output_file') or new_filename:
@@ -74,7 +73,7 @@ class AudioFile:
         else:
             return self.input_file
 
-    def _logged_popen(self, cmd_line, *args, **kwargs):
+    def _logged_popen(self, cmd_line: list[str], *args, **kwargs) -> subprocess.Popen:
         logger.debug(f'Running command: {subprocess.list2cmdline(cmd_line)}')
         return subprocess.Popen(cmd_line, *args, **kwargs)
 
@@ -85,7 +84,7 @@ class AudioFile:
         new_wav = NewCart(self.input_file, artist, title)
         wav.write_copy(new_wav)
 
-    def convert(self) -> pathlib.Path:
+    def convert(self) -> None:
         output = pathlib.Path(self.input_file.with_stem(self.input_file.stem + '_CONVERTING').with_suffix('.wav'))
         converted = str(self.input_file.with_suffix('.wav'))
         err, out = (ffmpeg
@@ -102,7 +101,7 @@ class AudioFile:
         self.input_file = converted
         logger.debug('move complete')
 
-    def analyse(self, blocksize: int = 65536, apply_input: bool = True) -> None:
+    def analyse(self, blocksize: int = 65536, apply_input: bool = True) -> str:
         audio = self._check_output(apply_input)
         logger.debug(f'analysing audio {audio}')
         hasher = hashlib.sha256()
@@ -119,13 +118,13 @@ class AudioFile:
         shutil.copy(audio_in, audio_copy)
         logger.debug(f'Copied {audio_in} to {audio_copy}')
 
-    def move(self, new_filename: pathlib.Path | str = None, apply_input: bool = True) -> None:
+    def move(self, new_filename: pathlib.Path | str | None = None, apply_input: bool = True) -> None:
         audio_in = self._check_output(apply_input)
         audio_out = self._create_output(new_filename)
         shutil.move(audio_in, audio_out)
         logger.debug(f'Moved {audio_in} to {audio_out}')
 
-    def split_silence(self, threshold: int = -60, duration: int = 10) -> list:
+    def split_silence(self, threshold: int = -60, duration: int = 10) -> list["AudioFile"]:
         silence_start_re = re.compile(r' silence_start: (?P<start>[0-9]+(\.?[0-9]*))$')
         silence_end_re = re.compile(r' silence_end: (?P<end>[0-9]+(\.?[0-9]*)) ')
         total_duration_re = re.compile(r'size[^ ]+ time=(?P<hours>[0-9]{2}):(?P<minutes>[0-9]{2}):(?P<seconds>[0-9\.]{5}) bitrate=')

@@ -1,7 +1,6 @@
 import click
 import feedparser
 import logging
-import lxml
 import requests
 import wget
 
@@ -15,7 +14,7 @@ class RadRSS:
     def __init__(self, url: str) -> None:
         self.url = url
 
-    def get_rss_entry(self):
+    def get_rss_entry(self) -> None:
         logger.info(f'Traversing the RSS feed: {self.url}')
         feed = feedparser.parse(self.url)
         if feed.status != 200 and feed.status != 302:
@@ -28,7 +27,7 @@ class RadRSS:
 
         self.entry = newest_entry
 
-    def get_download_link(self):
+    def get_download_link(self) -> None:
         try:
             entry_page = requests.get(self.entry)
         except Exception as e:
@@ -54,7 +53,7 @@ class RadRSS:
         self.download_link = mp3_link
 
 
-    def download(self, download_dir):
+    def download(self, download_dir: str) -> str:
         self.get_rss_entry()
         self.get_download_link()
         try:
@@ -66,10 +65,10 @@ class RadRSS:
             logger.exception(e)
             raise
 
-    def download_files(self):
+    def download_files(self) -> None:
         pass
 
-    def validate(self):
+    def validate(self) -> None:
         click.echo(f'Attempting {self.url = }')
         page = requests.get(self.url)
         if page.status_code != 200 and page.status_code != 302:

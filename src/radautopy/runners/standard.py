@@ -2,10 +2,18 @@ import logging
 
 from . import LOGGER_NAME
 from ..utils.audio import AudioFile
+from ..utils.config.config import ConfigJSON
+from ..utils.mail import RadMail
 
 logger = logging.getLogger(LOGGER_NAME)
 
-def perform_standard(config, mailer, email_bool, remote):
+def perform_standard(
+        config: ConfigJSON,
+        mailer: RadMail,
+        email_bool: bool,
+        remote
+    ) -> None:
+
     config.concat_directories_filemap()
     downloads = [(x['input_file'].name, x['input_file']) for x in config.filemap]
     logger.info(f'{downloads = }')

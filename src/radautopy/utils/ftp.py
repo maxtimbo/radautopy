@@ -1,6 +1,5 @@
 import click
 import logging
-import traceback
 import pathlib
 
 from ftplib import FTP, error_perm
@@ -11,11 +10,11 @@ logger = logging.getLogger(LOGGER_NAME)
 
 
 class RadFTP:
-    def __init__(self, server: str, username: str, password: str, pasv: bool, directory: str = None) -> None:
+    def __init__(self, server: str, username: str, password: str, pasv: bool, directory: str | None = None) -> None:
         self.server = server
         self.username = username
         self.password = password
-        self.pasv = bool
+        self.pasv = pasv
         self.directory = directory
 
     def do_action(self, function, pasv: bool = True, *args, **kwargs):
@@ -27,21 +26,7 @@ class RadFTP:
                 self.ftp.cwd(self.directory)
             return function(*args, **kwargs)
 
-    def validate(self) -> None:
-        click.echo('~~ FTP Settings ~~')
-        click.echo(f'server: {self.server}')
-        click.echo(f'username: {self.username}')
-        click.echo(f'password: {self.password}')
-        click.echo(f'directory: {self.directory}')
-        try:
-            files = self.do_action(self.list_remote)
-            for f in files:
-                click.echo(f)
-            click.echo('~~ FTP Connection success! ~~')
-        except:
-            click.echo('~~ FTP Connection Failed! ~~')
-
-    def list_remote(self, filename: str = None) -> list:
+    def list_remote(self, filename: str | None = None) -> list[str]:
         files = [] if filename is not None else ""
         try:
             if filename is not None:
@@ -62,15 +47,29 @@ class RadFTP:
 
         return files
 
-    def download_file(self, remote_file: str, local_file: pathlib.Path | str):
+    def download_file(self, remote_file: str, local_file: pathlib.Path | str) -> None:
         self.ftp.nlst(remote_file)
         with open(local_file, 'wb') as f:
             self.ftp.retrbinary('RETR ' + remote_file, f.write, 1024)
 
         logger.info(f"Downloaded {remote_file} as {local_file}")
 
-    def download_files(self, file_map: list[tuple]):
+    def download_files(self, file_map: list[tuple[str, pathlib.Path | str]]) -> None:
         for f in file_map:
             remote, local = f
             self.do_action(self.download_file, remote_file=remote, local_file=local)
+
+    def validate(self) -> None:
+        click.echo('~~ FTP Settings ~~')
+        click.echo(f'server: {self.server}')
+        click.echo(f'username: {self.username}')
+        click.echo(f'password: {self.password}')
+        click.echo(f'directory: {self.directory}')
+        try:
+            files = self.do_action(self.list_remote)
+            for f in files:
+                click.echo(f)
+            click.echo('~~ FTP Connection success! ~~')
+        except:
+            click.echo('~~ FTP Connection Failed! ~~')
 

@@ -19,7 +19,7 @@ class RadCloud:
         rclone.copyto(f'{self.full_path}/{filename}', str(destination))
         logger.info(f'Successful download {filename} to {destination}')
 
-    def download_files(self, file_map: list[tuple]) -> None:
+    def download_files(self, file_map: list[tuple[str, pathlib.Path | str]]) -> None:
         for f in file_map:
             remote, local = f
             self.download(remote, local)

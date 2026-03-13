@@ -102,7 +102,7 @@ def validate(config_file):
         elif 'rss' == config.job['job_type']:
             remote = RadRSS(**config.rss)
         elif 'ttwn' == config.job['job_type']:
-            remote = TTWN(**config.ttwn, timestamp_dir = config.dirs['audio_tmp'])
+            remote = TTWN(**config.ttwn)
 
         remote.validate()
 

@@ -1,11 +1,12 @@
 import logging
 import pathlib
+import traceback
 
 from . import LOGGER_NAME
 
 logger = logging.getLogger(LOGGER_NAME)
 
-def make_dirs(path: pathlib.Path | str):
+def make_dirs(path: pathlib.Path | str) -> pathlib.Path:
     if pathlib.Path.is_dir(path):
         logger.info(f'{path} already exists')
     else:

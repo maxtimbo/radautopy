@@ -1,6 +1,5 @@
 import click
 from pathlib import Path
-from time import sleep
 
 from .utils.config import LOG_DIR
 from .utils.config.config import ConfigJSON
@@ -25,10 +24,10 @@ logger = RadLogger(LOG_FILE).get_logger()
 
 @click.group()
 @click.option('-v', '--verbose', is_flag=True, help='enable verbose mode')
-@click.option('--disable_email', is_flag=True, help='disable email notification', default=True)
+@click.option('--disable_email', is_flag=True, help='test disable email notification', default=True)
 @click.argument('config_file')
 @click.pass_context
-def cli(ctx, config_file, verbose, disable_email):
+def cli(ctx: click.Context, config_file: str, verbose: bool, disable_email:bool) -> None:
     if verbose:
         logger = RadLogger(LOG_FILE, verbose=True).get_logger()
 
@@ -42,36 +41,36 @@ def cli(ctx, config_file, verbose, disable_email):
     job_type = config.job['job_type']
     if 'ftp' == job_type:
         ctx.obj['remote'] = RadFTP(**config.FTP)
-    if 'sftp' == job_type:
+    elif 'sftp' == job_type:
         ctx.obj['remote'] = RadSFTP(**config.SFTP)
     elif 'cloud' == job_type:
         ctx.obj['remote'] = RadCloud(**config.cloud)
     elif 'rss' == job_type:
         ctx.obj['remote'] = RadRSS(**config.rss)
     elif 'ttwn' == job_type:
-        ctx.obj['remote'] = TTWN(**config.ttwn, timestamp_dir = config.dirs['audio_tmp'])
+        ctx.obj['remote'] = TTWN(**config.ttwn)
 
 @cli.command()
 @click.option('-t', '--tries', type=int, default=1, help='define number of tries')
 @click.option('-s', '--sleep_timer', type=int, default=1200, help='define number of seconds between tries')
 @click.pass_context
-def news(ctx, tries, sleep_timer):
+def news(ctx: click.Context, tries: int, sleep_timer: int) -> None:
     perform_news(ctx.obj.get('config'), ctx.obj.get('mailer'), ctx.obj.get('email_bool'), ctx.obj.get('remote'), tries, sleep_timer)
 
 @cli.command()
 @click.pass_context
-def standard(ctx):
+def standard(ctx: click.Context) -> None:
     perform_standard(ctx.obj.get('config'), ctx.obj.get('mailer'), ctx.obj.get('email_bool'), ctx.obj.get('remote'))
 
 @cli.command()
 @click.option('-t', '--threshold', type=int, default = -60, help='define db threshold for silence split')
 @click.option('-d', '--duration', type=int, default = 15, help='silence duration in seconds')
 @click.pass_context
-def split_single(ctx, threshold, duration):
+def split_single(ctx: click.Context, threshold: int, duration: int) -> None:
     perform_split_single(ctx.obj.get('config'), ctx.obj.get('mailer'), ctx.obj.get('email_bool'), ctx.obj.get('remote'), threshold, duration)
 
 @cli.command()
 @click.pass_context
-def ttwn(ctx):
+def ttwn(ctx: click.Context) -> None:
     perform_ttwn(ctx.obj.get('config'), ctx.obj.get('mailer'), ctx.obj.get('email_bool'), ctx.obj.get('remote'))
 

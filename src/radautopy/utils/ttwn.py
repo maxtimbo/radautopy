@@ -3,82 +3,67 @@ import pathlib
 import requests
 import os
 
-from requests.auth import HTTPBasicAuth
-from datetime import datetime
-
 from . import LOGGER_NAME
-from .utilities import make_dirs
-from .config import ROOT_DIR
-
 
 logger = logging.getLogger(LOGGER_NAME)
 
 
 class TTWN:
-    def __init__(self, url: str, affiliate: str, username: str, password: str, timestamp_dir: pathlib.Path) -> None:
+    def __init__(self, url: str, affiliate: str, api_key: str) -> None:
         self.url = url
         self.affiliate = affiliate
-        self.username = username
-        self.password = password
-        self.timestamp_dir = pathlib.Path(timestamp_dir)
-        self.remote_date_format = "%a, %d %b %Y %H:%M:%S GMT"
-        self.local_date_format = "%Y%m%d%H%M%S"
+        self.api_key = api_key
+        self.headers = {
+                "X-API-Key": api_key,
+                "User-Agent": "ttwn_download_script_radautopy"
+        }
 
-        self.manifest = self.get_remote(os.path.join(self.url, self.affiliate, 'filemanifest.txt'))
+    def get_file_urls(self) -> list[str]:
+        """Fetch the list of new file URLs from the API.
 
+        Returns a list of download URLs (one per file), or an empty list if there are no new files.
+        """
+        url = f"{self.url}/audio/{self.affiliate}/newFiles"
+        response = requests.get(url, headers = self.headers, timeout = 30)
+        response.raise_for_status()
 
-    def probe_timestamp(self, new_timestamp: str = None) -> str:
-        existing_timestamp = [x for x in self.timestamp_dir.glob('*.timestamp')]
+        return [line.strip() for line in response.text.splitlines() if line.strip()]
 
-        if new_timestamp == None and not existing_timestamp:
-            default_timestamp = "20220325064459"
-            pathlib.Path(self.timestamp_dir, f'{default_timestamp}.timestamp').touch()
-            return default_timestamp
-        elif new_timestamp == None and existing_timestamp:
-            return existing_timestamp[0].stem
-        else:
-            existing_timestamp[0].unlink()
-            pathlib.Path(self.timestamp_dir, f'{new_timestamp}.timestamp').touch()
-            return new_timestamp
+    def download_file(self, file_url: str, local_path: pathlib.Path | str) -> bool:
+        """Download an audio file from the API.
 
-    def header_timestamp(self, req):
-        return datetime.strptime(
-                req.headers['last-modified'],
-                self.remote_date_format
-            ).strftime(
-                self.local_date_format
-            )
+        The API returns a 302 redirect to a signed CloudFront URL.
+        requests.get() follows this redirect automatically.
 
-    def get_remote(self, url):
-        return requests.get(url, auth=HTTPBasicAuth(self.username, self.password), timeout=20)
-
-    def get_manifest(self, timestamp: str) -> str:
-        modified = self.header_timestamp(self.manifest)
-
-        if modified > timestamp:
-            lines = self.manifest.iter_lines(decode_unicode=True)
-            for line in lines:
-                if "url" in line:
-                    url = line.split('=')[1].replace('"', '').strip()
-                    return url
-        else:
-            raise
-
-
-    def download_file(self, remote, local):
+        Returns True on success, False on failure.
+        """
         try:
-            with open(local, 'wb') as audio:
-                audio.write(remote.content)
-            if int(remote.headers['content-length']) == os.stat(local).st_size:
-                self.probe_timestamp(self.header_timestamp(remote))
-                return True
-            else:
+            response = requests.get(file_url, headers = self.headers, timeout = 60, allow_redirects = True)
+            response.raise_for_status()
+
+            with open(local_path, 'wb') as audio:
+                audio.write(response.content)
+
+            expected_size = int(response.headers.get('content-length', 0))
+            actual_size = os.stat(local_path).st_size
+            if expected_size and expected_size != actual_size:
+                logger.error(f"Size mismatch: expected {expected_size}, got {actual_size}")
                 return False
+
+            return True
         except Exception as e:
             logger.exception(e)
             return False
 
-    def validate(self):
-        print(f'{self.url = }')
+    def validate(self) -> None:
+        """Test the API connection."""
+        url = f"{self.url}/audio/{self.affiliate}/newFiles"
+        response = requests.get(url, headers=self.headers, timeout=30)
+        print(f"Status: {response.status_code}")
+        if response.status_code == 200:
+            lines = [l for l in response.text.splitlines() if l.strip()]
+            print(f"Files available: {len(lines)}")
+        else:
+            print(f"Error: {response.text}")
 
 
