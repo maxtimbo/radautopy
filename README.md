@@ -199,8 +199,7 @@ You can check the log output of all jobs in `~/radautopy/log/radautopy.log`
   "ttwn": {
     "url": str,
     "affiliate": str,
-    "username": str,
-    "password": str
+    "api_key": str
   }
 }
 ```
