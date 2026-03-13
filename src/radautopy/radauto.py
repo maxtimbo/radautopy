@@ -1,5 +1,6 @@
 import click
 from pathlib import Path
+from importlib.metadata import version
 
 from .utils.config import LOG_DIR
 from .utils.config.config import ConfigJSON
@@ -23,8 +24,9 @@ LOG_FILE = Path(LOG_DIR, "radautopy.log")
 logger = RadLogger(LOG_FILE).get_logger()
 
 @click.group()
+@click.version_option(version = version("radautopy"), prog_name = "radautopy")
 @click.option('-v', '--verbose', is_flag=True, help='enable verbose mode')
-@click.option('--disable_email', is_flag=True, help='test disable email notification', default=True)
+@click.option('--disable_email', is_flag=True, help='disable email notification', default=True)
 @click.argument('config_file')
 @click.pass_context
 def cli(ctx: click.Context, config_file: str, verbose: bool, disable_email:bool) -> None:
