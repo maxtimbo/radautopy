@@ -62,6 +62,14 @@ class TTWN:
             return False
 
     def validate(self):
-        print(f'{self.url = }')
+        """Test the API connection."""
+        url = f"{self.url}/audio/{self.affiliate}/newFiles"
+        response = requests.get(url, headers=self.headers, timeout=30)
+        print(f"Status: {response.status_code}")
+        if response.status_code == 200:
+            lines = [l for l in response.text.splitlines() if l.strip()]
+            print(f"Files available: {len(lines)}")
+        else:
+            print(f"Error: {response.text}")
 
 
