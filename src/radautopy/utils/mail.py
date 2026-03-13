@@ -1,6 +1,5 @@
 import logging
 import smtplib
-import traceback
 import pathlib
 
 from dataclasses import dataclass, field

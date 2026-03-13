@@ -91,7 +91,6 @@ TTWN_CONFIG = {
     "ttwn": {
         "url": str,
         "affiliate": str,
-        "username": str,
-        "password": str
+        "api_key": str
     }
 }

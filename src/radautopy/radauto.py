@@ -1,6 +1,5 @@
 import click
 from pathlib import Path
-from time import sleep
 
 from .utils.config import LOG_DIR
 from .utils.config.config import ConfigJSON

@@ -1,5 +1,6 @@
 import logging
 import pathlib
+import traceback
 
 from . import LOGGER_NAME
 

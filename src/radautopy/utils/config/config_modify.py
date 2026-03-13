@@ -110,7 +110,7 @@ class ConfigModify:
 
 
                     if 'job_type' in subkey:
-                        skel[key][subkey] = click.prompt(f'Define {subkey}:', type=click.Choice(['ftp', 'cloud', 'rss', 'ttwn']), default=subval)
+                        skel[key][subkey] = click.prompt(f'Define {subkey}:', type=click.Choice(['ftp', 'sftp', 'cloud', 'rss', 'ttwn']), default=subval)
                     elif 'job_runner' in subkey:
                         skel[key][subkey] = click.prompt(f'Define {subkey}:', type=click.Choice(['news', 'standard', 'split_single', 'ttwn']), default=subval)
                     else:

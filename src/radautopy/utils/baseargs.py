@@ -1,9 +1,6 @@
 import argparse
 import logging
 import pathlib
-import traceback
-
-from typing import Callable
 
 from . import LOGGER_NAME
 

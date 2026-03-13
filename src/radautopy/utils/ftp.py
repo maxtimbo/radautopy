@@ -15,7 +15,7 @@ class RadFTP:
         self.server = server
         self.username = username
         self.password = password
-        self.pasv = bool
+        self.pasv = pasv
         self.directory = directory
 
     def do_action(self, function, pasv: bool = True, *args, **kwargs):

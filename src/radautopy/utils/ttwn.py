@@ -33,7 +33,7 @@ class TTWN:
         response = requests.get(url, headers = self.headers, timeout = 30)
         response.raise_for_status()
 
-        return [line.strip() for lin in response.text.splitlines() if line.strip()]
+        return [line.strip() for line in response.text.splitlines() if line.strip()]
 
     def download_file(self, file_url: str, local_path) -> bool:
         """Download an audio file from the API.
@@ -44,7 +44,7 @@ class TTWN:
         Returns True on success, False on failure.
         """
         try:
-            response = requests.get(file_url, headers = self.headers, timeput = 60, allow_redirects = True)
+            response = requests.get(file_url, headers = self.headers, timeout = 60, allow_redirects = True)
             response.raise_for_status()
 
             with open(local_path, 'wb') as audio:

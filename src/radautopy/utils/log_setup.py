@@ -1,9 +1,6 @@
-import configparser
 import logging
 import logging.config
-import os
 import pathlib
-import traceback
 
 from logging.handlers import RotatingFileHandler
 
