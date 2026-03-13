@@ -15,7 +15,7 @@ class TTWN:
         self.api_key = api_key
         self.headers = {
                 "X-API-Key": api_key,
-                "User-Agent": "tten_download_script_radautopy"
+                "User-Agent": "ttwn_download_script_radautopy"
         }
 
     def get_file_urls(self) -> list[str]:
