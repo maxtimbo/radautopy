@@ -1,4 +1,5 @@
 import logging
+import re
 import smtplib
 import pathlib
 
@@ -11,10 +12,20 @@ from email.mime.audio import MIMEAudio
 from email.mime.application import MIMEApplication
 
 from . import LOGGER_NAME
+from .errors import ConfigError
 from .redact import MASK
 
 
 logger = logging.getLogger(LOGGER_NAME)
+
+
+def normalize_recipients(value) -> list[str]:
+    # accepts a list, "a@x, b@x", or a list saved as text like "['a@x', 'b@x']"
+    if value is None:
+        return []
+    if isinstance(value, str):
+        value = re.split(r"[,;\n]", value.strip().strip("[]"))
+    return [r for r in (str(v).strip().strip("'\"").strip() for v in value) if r]
 
 
 class Attachment:
@@ -57,6 +68,14 @@ class RadMail:
     body_style: str = "\"margin: 20px\""
     table_data: dict = field(default_factory=dict)
 
+    def __post_init__(self) -> None:
+        self.recipient = normalize_recipients(self.recipient)
+        if not self.recipient:
+            raise ConfigError("email config has no recipients")
+        bad = [r for r in self.recipient if "@" not in r]
+        if bad:
+            raise ConfigError(f"invalid recipient address(es): {', '.join(bad)}")
+
     @property
     def footer(self) -> str:
         return self._footer
@@ -79,10 +98,7 @@ class RadMail:
         msg = MIMEMultipart()
         msg["Subject"] = self.subject
         msg["From"] = self.sender
-        if type(self.recipient) == list:
-            msg["To"] = ", ".join(self.recipient)
-        else:
-            msg["To"] = self.recipient
+        msg["To"] = ", ".join(self.recipient)
         msg["reply-to"] = self.reply_to
 
         if self.header:
@@ -134,7 +150,7 @@ class RadMail:
         print(f'username: {self.username}')
         print(f'password: {MASK}')
         print(f'reply-to: {self.reply_to}')
-        print(f'recipient: {self.recipient}')
+        print(f'recipient: {", ".join(self.recipient)}')
         self.message = "Test successful!"
         try:
             self.send_mail("Mailer Test", "Mailer Test Successful", raise_on_error=True)

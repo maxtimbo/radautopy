@@ -208,7 +208,7 @@ You can test a job with `radautopy [job_name.json] [job_runner] {optional_extra_
 > }
 > ```
 > can either be a single address: `"example@test.com"` or a list:
-> `["example1@test.com", "example2@test.com"]`
+> `["example1@test.com", "example2@test.com"]`. In the web UI, enter multiple recipients separated by commas (`example1@test.com, example2@test.com`); they are saved as a list.
 
 > [!TIP]
 > You can add any of these email settings to a job config to override the global defaults. For example:
