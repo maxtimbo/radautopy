@@ -4,6 +4,7 @@ import requests
 import os
 
 from . import LOGGER_NAME
+from .errors import RemoteError
 
 logger = logging.getLogger(LOGGER_NAME)
 
@@ -24,8 +25,11 @@ class TTWN:
         Returns a list of download URLs (one per file), or an empty list if there are no new files.
         """
         url = f"{self.url}/audio/{self.affiliate}/newFiles"
-        response = requests.get(url, headers = self.headers, timeout = 30)
-        response.raise_for_status()
+        try:
+            response = requests.get(url, headers = self.headers, timeout = 30)
+            response.raise_for_status()
+        except requests.RequestException as e:
+            raise RemoteError(f"TTWN: could not get file list: {e}") from e
 
         return [line.strip() for line in response.text.splitlines() if line.strip()]
 
@@ -58,7 +62,11 @@ class TTWN:
     def validate(self) -> None:
         """Test the API connection."""
         url = f"{self.url}/audio/{self.affiliate}/newFiles"
-        response = requests.get(url, headers=self.headers, timeout=30)
+        try:
+            response = requests.get(url, headers=self.headers, timeout=30)
+        except requests.RequestException as e:
+            print(f"~~ TTWN connection failed! ~~\n{e}")
+            return
         print(f"Status: {response.status_code}")
         if response.status_code == 200:
             lines = [l for l in response.text.splitlines() if l.strip()]

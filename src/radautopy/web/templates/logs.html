@@ -22,12 +22,14 @@ let autoTimer = null;
 function refreshLog() {
   const name = document.getElementById('log-name').value;
   const lines = document.getElementById('log-lines').value;
-  fetch(`/api/log?name=${encodeURIComponent(name)}&lines=${encodeURIComponent(lines)}`)
-    .then(r => r.text())
+  const output = document.getElementById('log-output');
+  apiFetch(`/api/log?name=${encodeURIComponent(name)}&lines=${encodeURIComponent(lines)}`, {raw: true})
     .then(text => {
-      const output = document.getElementById('log-output');
       output.textContent = text || '(empty)';
       output.scrollTop = output.scrollHeight;
+    })
+    .catch(e => {
+      output.textContent = `Could not load log: ${e.message}`;
     });
 }
 

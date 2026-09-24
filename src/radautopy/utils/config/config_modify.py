@@ -14,6 +14,7 @@ from . import (
         SFTP_CONFIG,
         RSS_CONFIG,
         TTWN_CONFIG,
+        EMAIL_MODES,
         build_dict,
 )
 from . import store
@@ -130,6 +131,8 @@ class ConfigModify:
 
                     if 'job_type' in subkey:
                         skel[key][subkey] = click.prompt(f'Define {subkey}:', type=click.Choice(['ftp', 'sftp', 'cloud', 'rss', 'ttwn']), default=subval)
+                    elif subkey == 'email_mode':
+                        skel[key][subkey] = click.prompt('When should this job send email?', type=click.Choice(EMAIL_MODES), default=subval)
                     elif subkey == 'enabled':
                         skel[key][subkey] = click.confirm('Enable scheduled runs for this job?', default=subval)
                     elif 'job_runner' in subkey:

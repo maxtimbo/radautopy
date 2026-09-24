@@ -117,6 +117,13 @@
       </label>
     </div>
     <small>Disabled jobs are not scheduled, but can still be run manually.</small>
+    <label>Email</label>
+    <select data-path="job.email_mode">
+      {% set current_mode = config.job.email_mode or 'always' %}
+      {% for mode, label in [('always', 'Always email'), ('failure', 'Email on failure only'), ('never', 'Never email')] %}
+      <option value="{{ mode }}" {% if mode == current_mode %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
   </fieldset>
 
   <fieldset>
@@ -183,7 +190,14 @@
   <button type="button" onclick="deleteJob()">Delete</button>
   {% endif %}
 </form>
-<div id="status" class="status"></div>
+<div id="status" class="status">
+  {% if warnings %}
+  Needs attention:
+  <ul class="warnings">
+    {% for w in warnings %}<li>{{ w }}</li>{% endfor %}
+  </ul>
+  {% endif %}
+</div>
 <pre id="output" class="output" style="display:none"></pre>
 
 <script>
@@ -224,14 +238,8 @@ function generateFilemap() {
     artist_pattern: document.getElementById('qf-artist').value,
     title_pattern: document.getElementById('qf-title').value,
   };
-  fetch('/api/filemap/quick', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify(body),
-  })
-    .then(async r => {
-      const data = await r.json();
-      if (!r.ok) throw new Error(data.detail || 'generate failed');
+  apiFetch('/api/filemap/quick', {json: body})
+    .then(data => {
       renderFilemapTracks(data.filemap);
       showStatus(document.getElementById('status'), true, `Generated ${data.filemap.length} track(s) — review and ${isNew ? 'Create' : 'Save'}`);
     })
@@ -261,27 +269,16 @@ document.getElementById('edit-form').addEventListener('submit', function(event) 
 
   if (isNew) {
     payload.filename = filename;
-    fetch('/api/jobs', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(payload),
-    })
-      .then(async r => {
-        const data = await r.json();
-        if (!r.ok) throw new Error(data.detail || 'create failed');
+    apiFetch('/api/jobs', {json: payload})
+      .then(data => {
         window.location.href = `/jobs/${data.filename}/edit`;
       })
       .catch(e => showStatus(document.getElementById('status'), false, e.message));
   } else {
-    fetch(`/api/jobs/${filename}`, {
-      method: 'PUT',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(payload),
-    })
-      .then(async r => {
-        const data = await r.json();
-        if (!r.ok) throw new Error(data.detail || 'save failed');
-        showStatus(document.getElementById('status'), true, 'Saved');
+    apiFetch(`/api/jobs/${filename}`, {method: 'PUT', json: payload})
+      .then(data => {
+        const warnings = data.warnings || [];
+        showStatus(document.getElementById('status'), true, warnings.length ? 'Saved, but needs attention:' : 'Saved', warnings);
       })
       .catch(e => showStatus(document.getElementById('status'), false, e.message));
   }
@@ -289,30 +286,28 @@ document.getElementById('edit-form').addEventListener('submit', function(event) 
 
 function runJob() {
   const filename = document.getElementById('job-filename').value;
-  fetch(`/api/jobs/${filename}/run`, {method: 'POST'})
-    .then(r => r.json())
-    .then(data => showStatus(document.getElementById('status'), true, `Started (pid ${data.pid})`));
+  apiFetch(`/api/jobs/${filename}/run`, {method: 'POST'})
+    .then(data => showStatus(document.getElementById('status'), true, `Started (pid ${data.pid}); check Logs for the result`))
+    .catch(e => showStatus(document.getElementById('status'), false, e.message));
 }
 
 function validateJob() {
   const filename = document.getElementById('job-filename').value;
   const output = document.getElementById('output');
-  fetch(`/api/jobs/${filename}/validate`, {method: 'POST'})
-    .then(r => r.json())
+  apiFetch(`/api/jobs/${filename}/validate`, {method: 'POST'})
     .then(data => {
       output.style.display = 'block';
       output.textContent = data.output + (data.error ? `\n\nError: ${data.error}` : '');
-      showStatus(document.getElementById('status'), !data.error, data.error ? 'Validation failed' : 'Validation ok');
-    });
+      showStatus(document.getElementById('status'), !data.error, data.error ? 'Validation failed' : 'Validation ok', data.warnings);
+    })
+    .catch(e => showStatus(document.getElementById('status'), false, e.message));
 }
 
 function deleteJob() {
   const filename = document.getElementById('job-filename').value;
   if (!confirm(`Delete ${filename}? This cannot be undone.`)) return;
-  fetch(`/api/jobs/${filename}`, {method: 'DELETE'})
-    .then(async r => {
-      const data = await r.json();
-      if (!r.ok) throw new Error(data.detail || 'delete failed');
+  apiFetch(`/api/jobs/${filename}`, {method: 'DELETE'})
+    .then(() => {
       window.location.href = '/';
     })
     .catch(e => showStatus(document.getElementById('status'), false, e.message));
@@ -333,8 +328,7 @@ function deleteJob() {
       next.innerHTML = '';
       return;
     }
-    fetch(`/api/cron?expression=${encodeURIComponent(expression)}`)
-      .then(r => r.json())
+    apiFetch(`/api/cron?expression=${encodeURIComponent(expression)}`)
       .then(data => {
         if (input.value.trim() !== expression) return;
         if (!data.valid) {

@@ -5,15 +5,22 @@ import pathlib
 import re
 import shutil
 import subprocess
-import sys
-import traceback
 
 import taglib
 from cart_chunk import CartChunk, NewCart
 
 from . import LOGGER_NAME
+from .errors import AudioError
 
 logger = logging.getLogger(LOGGER_NAME)
+
+
+def _stderr_tail(stderr: bytes | str | None, lines: int = 5) -> str:
+    if not stderr:
+        return 'no ffmpeg output'
+    if isinstance(stderr, bytes):
+        stderr = stderr.decode('utf-8', errors='replace')
+    return ' | '.join(l.strip() for l in stderr.strip().splitlines()[-lines:])
 
 class AudioFile:
     def __init__(self, input_file: pathlib.Path | str, output_file: pathlib.Path | str = None) -> None:
@@ -27,12 +34,9 @@ class AudioFile:
     @input_file.setter
     def input_file(self, input_file: pathlib.Path | str) -> None:
         input_file = self.force_path(input_file)
-        if input_file.exists():
-            self._input_file = input_file
-        else:
-            logger.exception(FileNotFoundError(f"FileNotFound: {str(input_file)}"))
-            self._input_file = input_file
-            #raise FileNotFoundError(input_file)
+        if not input_file.exists():
+            logger.warning(f"input file does not exist yet: {input_file}")
+        self._input_file = input_file
 
     @property
     def output_file(self) -> pathlib.Path | None:
@@ -80,19 +84,28 @@ class AudioFile:
     def apply_metadata(self, artist: str, title: str) -> None:
         self.convert()
 
-        wav = CartChunk(self.input_file)
-        new_wav = NewCart(self.input_file, artist, title)
-        wav.write_copy(new_wav)
+        try:
+            wav = CartChunk(self.input_file)
+            new_wav = NewCart(self.input_file, artist, title)
+            wav.write_copy(new_wav)
+        except Exception as e:
+            raise AudioError(f'writing cart metadata to {self.input_file.name} failed: {e}') from e
 
     def convert(self) -> None:
         output = pathlib.Path(self.input_file.with_stem(self.input_file.stem + '_CONVERTING').with_suffix('.wav'))
         converted = str(self.input_file.with_suffix('.wav'))
-        err, out = (ffmpeg
-                    .input(str(self.input_file))
-                    .output(str(output))
-                    .overwrite_output()
-                    .run(capture_stdout = True, capture_stderr = True)
-        )
+        if not self.input_file.exists():
+            raise AudioError(f'cannot convert {self.input_file}: file not found')
+        try:
+            out, err = (ffmpeg
+                        .input(str(self.input_file))
+                        .output(str(output))
+                        .overwrite_output()
+                        .run(capture_stdout = True, capture_stderr = True)
+            )
+        except ffmpeg.Error as e:
+            output.unlink(missing_ok=True)
+            raise AudioError(f'ffmpeg could not convert {self.input_file.name}: {_stderr_tail(e.stderr)}') from e
         logger.debug(f'{out = }')
         logger.debug(f'{err = }')
         self.input_file.unlink()
@@ -115,13 +128,19 @@ class AudioFile:
     def copy(self, copy_file: pathlib.Path | str, apply_input: bool = True) -> None:
         audio_in = self._check_output(apply_input)
         audio_copy = self.force_path(copy_file)
-        shutil.copy(audio_in, audio_copy)
+        try:
+            shutil.copy(audio_in, audio_copy)
+        except OSError as e:
+            raise AudioError(f'copying {audio_in} to {audio_copy} failed: {e.strerror or e}') from e
         logger.debug(f'Copied {audio_in} to {audio_copy}')
 
     def move(self, new_filename: pathlib.Path | str | None = None, apply_input: bool = True) -> None:
         audio_in = self._check_output(apply_input)
         audio_out = self._create_output(new_filename)
-        shutil.move(audio_in, audio_out)
+        try:
+            shutil.move(audio_in, audio_out)
+        except OSError as e:
+            raise AudioError(f'moving {audio_in.name} to {audio_out} failed: {e.strerror or e}') from e
         logger.debug(f'Moved {audio_in} to {audio_out}')
 
     def split_silence(self, threshold: int = -60, duration: int = 10) -> list["AudioFile"]:
@@ -140,9 +159,7 @@ class AudioFile:
         output = p.communicate()[1].decode('utf-8')
 
         if p.returncode != 0:
-            logger.critical("An error occured when running ffmpeg")
-            logger.critical(output)
-            sys.exit(1)
+            raise AudioError(f'ffmpeg silence detection failed on {self.input_file.name}: {_stderr_tail(output)}')
 
         logger.debug("~~ START FFMPEG SILENCE DETECT OUTPUT ~~")
         logger.debug(output)
@@ -152,6 +169,7 @@ class AudioFile:
 
         chunk_starts = []
         chunk_ends = []
+        end_time = None
 
         for line in lines:
             silence_start_match = silence_start_re.search(line)
@@ -182,7 +200,7 @@ class AudioFile:
         for i, (start_time, end_time) in enumerate(self.chunk_times):
             time = end_time - start_time
             out_filename = pathlib.Path(self.output_file.parent, self.output_file.stem + str(i + 1) + self.output_file.suffix)
-            self._logged_popen(
+            cut = self._logged_popen(
                     (ffmpeg
                         .input(str(self.input_file), ss=start_time, t=time)
                         .output(str(out_filename))
@@ -191,7 +209,10 @@ class AudioFile:
                      ),
                     stdout = subprocess.PIPE,
                     stderr = subprocess.PIPE
-            ).communicate()
+            )
+            _, cut_err = cut.communicate()
+            if cut.returncode != 0:
+                raise AudioError(f'ffmpeg could not cut {out_filename.name}: {_stderr_tail(cut_err)}')
             cuts.append(AudioFile(out_filename))
 
         return cuts
