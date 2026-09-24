@@ -66,10 +66,57 @@
       <option value="{{ r }}" {% if r == config.job.job_runner %}selected{% endif %}>{{ r }}</option>
       {% endfor %}
     </select>
-    <label>Cron Expression <small>(see crontab.guru)</small></label>
-    <input data-path="job.cron_expression" value="{{ config.job.cron_expression }}">
+    <label>Cron Expression</label>
+    <input data-path="job.cron_expression" id="cron-input" value="{{ config.job.cron_expression }}" placeholder="minute hour day month weekday" autocomplete="off">
+    <div class="cron-helper">
+      <label>Presets
+        <select id="cron-preset">
+          <option value="">Choose a preset...</option>
+          <option value="0 * * * *">Every hour, on the hour</option>
+          <option value="0 0 * * *">Every day at 00:00</option>
+          <option value="0 6 * * *">Every day at 06:00</option>
+          <option value="0 9 * * 1-5">Weekdays at 09:00</option>
+          <option value="0 9 * * 6,0">Weekends at 09:00</option>
+          <option value="0 3 * * 1">Every Monday at 03:00</option>
+          <option value="*/15 * * * *">Every 15 minutes</option>
+          <option value="0 5 1 * *">First of the month at 05:00</option>
+        </select>
+      </label>
+      <div id="cron-description" class="cron-description"></div>
+      <div id="cron-next"></div>
+      <details>
+        <summary>Field reference</summary>
+        <table>
+          <thead><tr><th>Field</th><th>Allowed values</th></tr></thead>
+          <tbody>
+            <tr><td>minute</td><td>0-59</td></tr>
+            <tr><td>hour</td><td>0-23</td></tr>
+            <tr><td>day of month</td><td>1-31</td></tr>
+            <tr><td>month</td><td>1-12 or jan-dec</td></tr>
+            <tr><td>day of week</td><td>0-7 or sun-sat (0 and 7 are both Sunday)</td></tr>
+          </tbody>
+        </table>
+        <table>
+          <thead><tr><th>Symbol</th><th>Meaning</th><th>Example</th></tr></thead>
+          <tbody>
+            <tr><td>*</td><td>any value</td><td><code>* * * * *</code> every minute</td></tr>
+            <tr><td>,</td><td>list of values</td><td><code>0 5,17 * * *</code> 05:00 and 17:00</td></tr>
+            <tr><td>-</td><td>range of values</td><td><code>0 9 * * 1-5</code> weekdays at 09:00</td></tr>
+            <tr><td>/</td><td>step values</td><td><code>*/10 * * * *</code> every 10 minutes</td></tr>
+          </tbody>
+        </table>
+        <p><small>Times use the server's timezone, shown in the next run times above.</small></p>
+      </details>
+    </div>
     <label>Extra Args</label>
     <input data-path="job.extra_args" value="{{ config.job.extra_args }}">
+    <div class="job-type-check">
+      <label>
+        <input type="checkbox" data-path="job.enabled" {% if config.job.enabled is not defined or config.job.enabled %}checked{% endif %}>
+          Enabled
+      </label>
+    </div>
+    <small>Disabled jobs are not scheduled, but can still be run manually.</small>
   </fieldset>
 
   <fieldset>
@@ -270,5 +317,56 @@ function deleteJob() {
     })
     .catch(e => showStatus(document.getElementById('status'), false, e.message));
 }
+</script>
+<script>
+(() => {
+  const input = document.getElementById('cron-input');
+  const description = document.getElementById('cron-description');
+  const next = document.getElementById('cron-next');
+  let timer;
+
+  function update() {
+    const expression = input.value.trim();
+    if (!expression) {
+      description.className = 'cron-description';
+      description.textContent = 'Not scheduled. Leave blank to only run this job manually.';
+      next.innerHTML = '';
+      return;
+    }
+    fetch(`/api/cron?expression=${encodeURIComponent(expression)}`)
+      .then(r => r.json())
+      .then(data => {
+        if (input.value.trim() !== expression) return;
+        if (!data.valid) {
+          showStatus(description, false, `Invalid: ${data.error}`);
+          description.classList.add('cron-description');
+          next.innerHTML = '';
+          return;
+        }
+        showStatus(description, true, data.description);
+        description.classList.add('cron-description');
+        const list = document.createElement('ul');
+        data.next_runs.forEach(run => {
+          const item = document.createElement('li');
+          item.textContent = run;
+          list.appendChild(item);
+        });
+        next.innerHTML = '<small>Next runs:</small>';
+        next.appendChild(list);
+      });
+  }
+
+  input.addEventListener('input', () => {
+    clearTimeout(timer);
+    timer = setTimeout(update, 250);
+  });
+  document.getElementById('cron-preset').addEventListener('change', e => {
+    if (!e.target.value) return;
+    input.value = e.target.value;
+    e.target.value = '';
+    update();
+  });
+  update();
+})();
 </script>
 {% endblock %}

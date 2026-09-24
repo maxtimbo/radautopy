@@ -2,20 +2,25 @@ services:
   scheduler:
     build: .
     command: radautopy-scheduler
+    environment:
+      - TZ
     volumes:
       - radautopy-data:/data
+      - /etc/localtime:/etc/localtime:ro
     restart: unless-stopped
 
   web:
     build: .
     command: radautopy-web
     environment:
-      RCLONE_GUI_USER: ${RCLONE_GUI_USER:-admin}
-      RCLONE_GUI_PASS: ${RCLONE_GUI_PASS}
+      - TZ
+      - RCLONE_GUI_USER=${RCLONE_GUI_USER:-admin}
+      - RCLONE_GUI_PASS=${RCLONE_GUI_PASS}
     ports:
       - "8000:8000"
     volumes:
       - radautopy-data:/data
+      - /etc/localtime:/etc/localtime:ro
     restart: unless-stopped
 
   rclone-gui:
@@ -26,12 +31,14 @@ services:
       --addr=0.0.0.0:5522 --api-addr=0.0.0.0:5533
       --user=${RCLONE_GUI_USER:-admin} --pass=${RCLONE_GUI_PASS:?set RCLONE_GUI_PASS in .env}
     environment:
-      RCLONE_CONFIG: /data/rclone.conf
+      - TZ
+      - RCLONE_CONFIG=/data/rclone.conf
     ports:
       - "5522:5522"
       - "5533:5533"
     volumes:
       - radautopy-data:/data
+      - /etc/localtime:/etc/localtime:ro
     restart: unless-stopped
 
 volumes:
@@ -40,4 +47,4 @@ volumes:
     driver_opts:
       type: none
       o: bind
-      device: /path/to/radautopy
+      device: /home/tfinley/radautopy

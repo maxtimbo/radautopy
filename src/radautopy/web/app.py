@@ -28,6 +28,7 @@ from ..utils.config import (
 from ..utils.config.config import ConfigJSON
 from ..utils.config.config_modify import build_quick_filemap
 from ..utils.config.replace_fillers import ReplaceFillers
+from ..utils.cron import describe, next_runs
 from ..utils.mail import RadMail
 from ..utils.remote import build_remote
 from ..utils.utilities import make_dirs, radautopy_executable
@@ -86,8 +87,34 @@ def list_jobs() -> list[dict]:
             "job_type": job.get("job_type", ""),
             "job_runner": job.get("job_runner", ""),
             "cron_expression": job.get("cron_expression", ""),
+            "enabled": job.get("enabled", True),
+            "cron_description": _cron_description(job.get("cron_expression", "")),
         })
     return jobs
+
+
+def _cron_description(expression: str) -> str:
+    if not expression:
+        return "not scheduled"
+    try:
+        next_runs(expression, count=1)
+        return describe(expression)
+    except Exception:
+        return "invalid cron expression"
+
+
+@app.get("/api/cron")
+def cron_info(expression: str) -> dict:
+    try:
+        runs = next_runs(expression)
+        description = describe(expression)
+    except Exception as e:
+        return {"valid": False, "error": str(e)}
+    return {
+        "valid": True,
+        "description": description,
+        "next_runs": [r.strftime("%a %Y-%m-%d %H:%M %Z") for r in runs],
+    }
 
 
 @app.post("/api/jobs")
@@ -148,6 +175,18 @@ def put_job(name: str, payload: dict = Body(...)) -> dict:
     name = _job_name(name)
     _write_config(name, payload)
     return {"filename": name, "config": payload}
+
+
+@app.put("/api/jobs/{name}/enabled")
+def set_job_enabled(name: str, payload: dict = Body(...)) -> dict:
+    name = _job_name(name)
+    enabled = payload.get("enabled")
+    if not isinstance(enabled, bool):
+        raise HTTPException(status_code=400, detail="enabled must be true or false")
+    config = _read_config(name)
+    config.setdefault("job", {})["enabled"] = enabled
+    store.save(name, config)
+    return {"filename": name, "enabled": enabled}
 
 
 @app.delete("/api/jobs/{name}")
@@ -308,7 +347,12 @@ def email_edit_page(request: Request):
 
 
 @app.get("/rclone")
-def rclone_gui(request: Request):
+def rclone_page(request: Request):
+    return templates.TemplateResponse(request, "rclone.html", {})
+
+
+@app.get("/rclone/login")
+def rclone_login(request: Request):
     # rclone-web only keeps the API url if login succeeds, so the link must carry credentials
     host = request.url.hostname
     gui_port = os.environ.get("RCLONE_GUI_PORT", "5522")
