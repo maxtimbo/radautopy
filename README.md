@@ -1,109 +1,136 @@
 # radautopy
 
+radautopy automates radio show delivery. It downloads audio from FTP, SFTP, rclone remotes, RSS feeds or TTWN, converts and renames the files, adds Scott (cart chunk) metadata for WideOrbit, exports them, and emails a report.
+
 ### Radautopy Now Uses Docker
-This new system uses docker to containerize everything. I've moved to using APScheduler instead of cron and built a simple web app for configuration. I've added [rclone-web](https://github.com/rclone/rclone-web) to manage rclone as well. Most everything can be setup in rclone-web and then automated using radautopy. This also moves files, renames them, and adds metadata with the scott header (Wide Orbit). 
+Everything runs in containers. Jobs are scheduled with APScheduler instead of cron, and a simple web app handles job configuration. [rclone-web](https://github.com/rclone/rclone-web) is bundled for managing rclone remotes, which radautopy can then download from on a schedule.
 
 ### Requirements
 
-You just need Docker and Docker Compose
+Docker and Docker Compose.
 
 ### Installation
 
-Clone this repo and configure `docker-compose.yml` and `.env`.
+1. Clone this repo.
 
-To setup, some key changes to docker-compose file must be made.
+2. Create the data directory on the host. It holds the database, logs and working audio, and must exist before the containers start. All containers run as uid 1000, so that user needs write access:
 
-The `volumes` section has `radautopy-data` setup for each service and that must be the same for all. Any other volumes for export should also be configured in a similar fashion across all containers.
+    ```
+    mkdir -p /path/to/radautopy
+    sudo chown 1000:1000 /path/to/radautopy
+    ```
 
-```
-services:
-  scheduler:
+3. In `docker-compose.yml`, set `device` to that directory. Every service mounts the same `radautopy-data` volume at `/data`:
+
+    ```
     volumes:
-      - radautopy-data:/data
-  web:
-    volumes:
-      - radautopy-data:/data
-  rclone-gui:
-    volumes:
-      - radautopy-data:/data
+      radautopy-data:
+        driver: local
+        driver_opts:
+          type: none
+          o: bind
+          device: /path/to/radautopy
+    ```
 
-volumes:
-  radautopy-data:
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: /home/tfinley/radautopy
-```
+4. Mount any export destinations (for example the WideOrbit import share) into both `scheduler` and `web`. A job's `export_dir` must use the **container** path, not the host path:
 
-You can set different ports for the web-gui:
+    ```
+    services:
+      scheduler:
+        volumes:
+          - radautopy-data:/data
+          - /mnt/wideorbit/import:/export
+      web:
+        volumes:
+          - radautopy-data:/data
+          - /mnt/wideorbit/import:/export
+    ```
 
-```
-  web:
-    ports:
-      - "8000:8000"
-```
+    With this mount, a job would use `"export_dir": "/export"`.
 
-Copy the `.env.sample` to `.env` and fill out the user/password for rclone. This is the only time this needs to be configured.
+5. Copy `.env.sample` to `.env` and set `RCLONE_GUI_PASS` (and optionally `RCLONE_GUI_USER`, which defaults to `admin`). Compose refuses to start until the password is set.
 
-Then just run `docker compose up -d --build` to build the containers and start the app. Point a web browser to `[computer.ip]:[web-port]` or `localhost:[web-port]` if you're running on the same machine.
+6. Build and start:
 
+    ```
+    docker compose up -d --build
+    ```
 
-### Initial Setup
-#### The following is legacy, but gives a good idea of how the web gui works.
-#### To-Do: Update this section.
+    Then browse to `http://<server-ip>:8000`, or `http://localhost:8000` on the same machine.
 
-Installing creates two cli tools. `radauto-config` and `radautopy`.  
-`radauto-config` will allow you to quckly create configs for shows and other jobs. The initial run will create a new directory tree in your user home:
+#### Ports
 
-```
-~/radautopy/
-├── audio_tmp
-├── config
-├── download
-├── export
-└── log
-```
+| Port | Service |
+| --- | --- |
+| 8000 | radautopy web UI |
+| 5522 | rclone web GUI |
+| 5533 | rclone API (the GUI calls it directly from the browser) |
 
-Using `radauto-config create MyCoolShow.json [job type, see below]` will create an `email.json` global email config file as well as `MyCoolShow.json`. Follow the prompts and fill in all the information.
+All three must be reachable from your browser. If you change the host side of the rclone ports (for example `"9000:5522"`), also set `RCLONE_GUI_PORT` and `RCLONE_API_PORT` under the `web` service's `environment` so the **rclone Remotes** link points to the right place.
 
 > [!WARNING]
-> All passwords are stored plaintext. Please keep this in mind when using this script.
+> The web UI has no login, and all passwords are stored in plain text. The **rclone Remotes** link logs straight into the rclone GUI, which can read everything under `/data`. Only expose these ports on a trusted network.
+
+#### Updating
+
+```
+git pull
+docker compose up -d --build
+```
+
+#### Logs
+
+Job output goes to `<data dir>/log/radautopy.log` and scheduler output to `<data dir>/log/radautopy-scheduler.log`. Both can also be viewed on the web UI's Logs page.
+
+#### Migrating from JSON configs
+
+Configs are now stored in SQLite (`<data dir>/radautopy.db`). To import configs from an older install, copy the `.json` files into `<data dir>/config` and run:
+
+```
+docker compose exec web radautopy-json-to-sqlite
+```
+
+### Command Line Tools
 
 > [!NOTE]
-> The following job types have been added:
+> This section is from the pre-Docker version. The web UI covers the same steps, and the CLI still works inside the containers, for example `docker compose exec web radauto-config list-configs`.
+
+The package includes two CLI tools: `radauto-config` and `radautopy`.
+`radauto-config` lets you quickly create configs for shows and other jobs.
+
+Using `radauto-config create MyCoolShow.json [job type, see below]` will create the global email config as well as `MyCoolShow.json`. Follow the prompts and fill in all the information.
+
+> [!NOTE]
+> The following job types are available:
 > - ftp
 > - sftp
-> - rclone
+> - cloud (rclone)
 > - rss
 > - ttwn
 
 > [!TIP]
-> `rclone` job type must be setup using rclone prior to running this script
+> The rclone remote for a `cloud` job must exist before the job runs. Create it in the rclone web GUI first.
 
-Once created, you can use `radauto-config list-configs` to show a list of configs in `~/radautopy/configs`. You can also use `radauto-config modify [job_name.json]` to alter an existing config (do not include a job file to modify the global email config). You can also use `radauto-config validate [job_name.json]` to validate an existing job (once again, leave out the job file to validate the email config).
+Once created, use `radauto-config list-configs` to list saved configs. Use `radauto-config modify [job_name.json]` to alter an existing config (leave out the job name to modify the global email config), and `radauto-config validate [job_name.json]` to validate a job (again, leave out the job name to validate the email config).
 
-Finally, if you set the cron settings for your job, you can use `radauto-config set-cronjob [job_name.json]` to create a cron entry.
+Jobs run on the schedule set in their `cron_expression`. The scheduler container picks up changes automatically, so `radauto-config set-cronjob` is not needed under Docker.
 
-All json files can be edited using your favorite text editor. Just be sure that all entries are still in place following the examples below. You can add or remove any `"email": {}` entries to a job as these are email setting overrides.
+You can add or remove any `"email": {}` entries in a job, as these override the global email settings.
 
 #### Filemaps
 
-During the job configuration prompts, you will be presented with three options for filemap creation:
+During job configuration, you will be offered three ways to build a filemap:
 
 - individual track edit
- - Allows you to select an idividual track to edit
+  - Select an individual track to edit
 - filemap wizard
- - Add filemaps one by one
+  - Add filemaps one by one
 - quick show wizard
- - quickly create an entire show filemap following the prompts
+  - Quickly create an entire show filemap by following the prompts
 
 #### Usage
 
-You can test your config by using `radautopy [job_name.json] [job_type] {optional_extra_args}`  
-If you created a cron entry, it will run automatically at the specified time.
-
-You can check the log output of all jobs in `~/radautopy/log/radautopy.log`
+You can test a job with `radautopy [job_name.json] [job_runner] {optional_extra_args}`, or with the Run button in the web UI.
 
 ### Config Templates
 
@@ -128,11 +155,11 @@ You can check the log output of all jobs in `~/radautopy/log/radautopy.log`
 
 > [!NOTE]
 > ```
-> "email: {
+> "email": {
 >   "recipient":
 > }
 > ```
-> can either be a single address: `"eaxample@test.com"` or a list:
+> can either be a single address: `"example@test.com"` or a list:
 > `["example1@test.com", "example2@test.com"]`
 
 > [!TIP]
@@ -151,9 +178,9 @@ You can check the log output of all jobs in `~/radautopy/log/radautopy.log`
 >     "directory": ""
 >   },
 >   "dirs": {
->     "download_dir": "/path/to/download",
->     "export_dir": "/path/to/export",
->     "audio_tmp": "/path/to/tmp"
+>     "download_dir": "/data/download",
+>     "export_dir": "/export",
+>     "audio_tmp": "/data/audio_tmp"
 >   },
 >   "filemap": [
 >     {
@@ -164,7 +191,7 @@ You can check the log output of all jobs in `~/radautopy/log/radautopy.log`
 >     }
 >   ],
 >   "email": {
->     "sender": "OVERIDE SENDER",
+>     "sender": "OVERRIDE SENDER",
 >     "subject": "OVERRIDE SUBJECT",
 >     "recipient": ["override@r1.com", "override2@r2.com"]
 >   }
@@ -180,7 +207,7 @@ You can check the log output of all jobs in `~/radautopy/log/radautopy.log`
     "job_type": str,
     "cron_expression": str,
     "job_runner": str,
-    "extra_args": "",
+    "extra_args": ""
   }
 }
 ```
@@ -214,7 +241,7 @@ You can check the log output of all jobs in `~/radautopy/log/radautopy.log`
 
 #### Example rclone Config
 
-`server` is the name of a remote in rclone's config. In Docker, remotes are managed through the bundled [rclone web GUI](https://github.com/rclone/rclone-web) (the **rclone Remotes** link in the web UI, port 5522). Set `RCLONE_GUI_PASS` (and optionally `RCLONE_GUI_USER`) in a `.env` next to `docker-compose.yml` first.
+`server` is the name of a remote in rclone's config. Remotes are managed in the bundled [rclone web GUI](https://github.com/rclone/rclone-web), opened with the **rclone Remotes** link in the web UI. The job type for rclone is `cloud`.
 
 ```
 {
@@ -239,14 +266,14 @@ You can check the log output of all jobs in `~/radautopy/log/radautopy.log`
 #### Directories
 
 > [!NOTE]
-> All configs require these directories, even if not all directories are used.
+> All configs require these directories, even if not all directories are used. The defaults below are container paths.
 
 ```
 {
   "dirs": {
-    "download_dir": "~/radautopy/download",
-    "export_dir": "~/radautopy/export",
-    "audio_tmp": "~/radautopy/audio_tmp"
+    "download_dir": "/data/download",
+    "export_dir": "/data/export",
+    "audio_tmp": "/data/audio_tmp"
   }
 }
 ```
@@ -261,7 +288,7 @@ You can check the log output of all jobs in `~/radautopy/log/radautopy.log`
       "output_file": "output.wav",
       "artist": "Artist Metadata",
       "title": "Title Metadata"
-    },
+    }
   ]
 }
 ```
