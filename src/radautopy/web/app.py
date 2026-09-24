@@ -32,7 +32,7 @@ from ..utils.config.config_modify import build_quick_filemap
 from ..utils.config.replace_fillers import ReplaceFillers
 from ..utils.cron import describe, next_runs, trigger_from_crontab
 from ..utils.errors import ConfigError, RadautopyError
-from ..utils.mail import RadMail
+from ..utils.mail import RadMail, normalize_recipients
 from ..utils.remote import build_remote, check_runner
 from ..utils.utilities import check_writable, make_dirs, radautopy_executable
 
@@ -110,13 +110,25 @@ def _dir_warnings(config: dict) -> list[str]:
     return warnings
 
 
+def _recipient_warnings(data: dict) -> list[str]:
+    email = data.get("email")
+    if not isinstance(email, dict) or "recipient" not in email:
+        return []
+    email["recipient"] = normalize_recipients(email["recipient"])
+    if not email["recipient"]:
+        return ["no email recipients set"]
+    bad = [r for r in email["recipient"] if "@" not in r]
+    return [f"invalid recipient address(es): {', '.join(bad)}"] if bad else []
+
+
 def _write_config(name: str, data: dict) -> list[str]:
     if not isinstance(data, dict):
         raise HTTPException(status_code=400, detail="config must be a JSON object")
+    warnings = _recipient_warnings(data)
     store.save(name, data)
     if name == "email.json":
-        return []
-    return _job_warnings(data) + _dir_warnings(data)
+        return warnings
+    return warnings + _job_warnings(data) + _dir_warnings(data)
 
 
 def _replace_type_markers(section: dict) -> dict:
@@ -307,8 +319,8 @@ def get_email() -> dict:
 def put_email(payload: dict = Body(...)) -> dict:
     if not isinstance(payload.get("email"), dict):
         raise HTTPException(status_code=400, detail="email config must have an 'email' section")
-    _write_config("email.json", payload)
-    return {"config": payload}
+    warnings = _write_config("email.json", payload)
+    return {"config": payload, "warnings": warnings}
 
 
 @app.post("/api/email/validate")

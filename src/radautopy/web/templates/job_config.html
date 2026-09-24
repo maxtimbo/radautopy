@@ -172,7 +172,8 @@
         {% if key == 'password' %}
         <input type="password" id="eo-value-{{ key }}" value="{{ email_overrides.get(key, '') }}" {% if key not in email_overrides %}disabled{% endif %}>
         {% else %}
-        <input id="eo-value-{{ key }}" value="{{ email_overrides.get(key, '') }}" {% if key not in email_overrides %}disabled{% endif %}>
+        {% set eo_value = email_overrides.get(key, '') %}
+        <input id="eo-value-{{ key }}" value="{{ eo_value | join(', ') if eo_value is not string and eo_value is iterable else eo_value }}" {% if key == 'recipient' %}placeholder="one@example.com, two@example.com"{% endif %} {% if key not in email_overrides %}disabled{% endif %}>
         {% endif %}
     {% endfor %}
   </fieldset>

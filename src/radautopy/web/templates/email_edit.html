@@ -20,8 +20,8 @@
     <input type="password" data-path="email.password" value="{{ config.email.password }}">
     <label>Reply To</label>
     <input data-path="email.reply_to" value="{{ config.email.reply_to }}">
-    <label>Recipient</label>
-    <input data-path="email.recipient" value="{{ config.email.recipient }}">
+    <label>Recipients <small>(separate multiple addresses with commas)</small></label>
+    <input data-path="email.recipient" value="{{ config.email.recipient | join(', ') if config.email.recipient is not string else config.email.recipient }}" placeholder="one@example.com, two@example.com">
     <label>Header</label>
     <input data-path="email.header" value="{{ config.email.header }}">
     <label>Footer</label>
@@ -38,8 +38,9 @@ document.getElementById('edit-form').addEventListener('submit', function(event) 
   event.preventDefault();
   const payload = collectPayload(document.getElementById('edit-form'));
   apiFetch('/api/email', {method: 'PUT', json: payload})
-    .then(() => {
-      showStatus(document.getElementById('status'), true, 'Saved');
+    .then(data => {
+      const warnings = data.warnings || [];
+      showStatus(document.getElementById('status'), true, warnings.length ? 'Saved, but needs attention:' : 'Saved', warnings);
     })
     .catch(e => showStatus(document.getElementById('status'), false, e.message));
 });
