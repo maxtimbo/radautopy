@@ -1,0 +1,274 @@
+{% extends "base.html" %}
+{% block title %}{% if is_new %}New Job{% else %}{{ filename }}{% endif %} - radautopy{% endblock %}
+{% block content %}
+<h1>{% if is_new %}New Job{% else %}{{ filename }}{% endif %}</h1>
+
+<details>
+  <summary>Quick Filemap Generator</summary>
+  <div class="field-form">
+    <p><small>Generates one track per hour &times; segment and replaces the filemap below &mdash; review before saving.</small></p>
+    <div class="fm-gen">
+      <div class="fm-cluster">
+      <label>Hours</label>
+      <input type="number" id="qf-hours" value="1" min="1">
+      </div>
+      <div class="fm-cluster">
+      <label>Segments per hour</label>
+      <input type="number" id="qf-segments" value="1" min="1">
+      </div>
+      <div class="fm-cluster">
+      <label>Input pattern</label>
+      <input id="qf-input" placeholder="show_{hour}_{segment}.mp3">
+      </div>
+      <div class="fm-cluster">
+      <label>Output pattern</label>
+      <input id="qf-output" placeholder="{year}{month}{day}_{hour}_{segment}.wav">
+      </div>
+      <div class="fm-cluster">
+      <label>Artist pattern</label>
+      <input id="qf-artist" placeholder="My Show">
+      </div>
+      <div class="fm-cluster">
+      <label>Title pattern</label>
+      <input id="qf-title" placeholder="Hour {hour} Segment {segment}">
+      </div>
+    </div>
+    <table>
+      <thead><tr><th>Variable</th><th>Example</th></tr></thead>
+      <tbody>
+        {% for token, example in filler_variables %}
+        <tr><td>{{ token }}</td><td>{{ example }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <button type="button" onclick="generateFilemap()">Generate Filemap Tracks</button>
+  </div>
+</details>
+
+<form class="field-form" id="edit-form">
+  <fieldset>
+    <legend>Job</legend>
+    <label>Filename</label>
+    <input type="text" id="job-filename" value="{{ filename }}" placeholder="MyCoolShow" {% if not is_new %}disabled{% endif %} required>
+    <label>Job Name</label>
+    <input data-path="job.job_name" value="{{ config.job.job_name }}">
+    <label>Description</label>
+    <input data-path="job.description" value="{{ config.job.description }}">
+    <label>Job Type</label>
+    <select data-path="job.job_type" id="job-type-select">
+      {% for jt in job_types %}
+      <option value="{{ jt }}" {% if jt == current_job_type %}selected{% endif %}>{{ jt }}</option>
+      {% endfor %}
+    </select>
+    <label>Job Runner</label>
+    <select data-path="job.job_runner">
+      {% for r in job_runners %}
+      <option value="{{ r }}" {% if r == config.job.job_runner %}selected{% endif %}>{{ r }}</option>
+      {% endfor %}
+    </select>
+    <label>Cron Expression <small>(see crontab.guru)</small></label>
+    <input data-path="job.cron_expression" value="{{ config.job.cron_expression }}">
+    <label>Extra Args</label>
+    <input data-path="job.extra_args" value="{{ config.job.extra_args }}">
+  </fieldset>
+
+  <fieldset>
+    <legend>Directories</legend>
+    <label>Download Dir</label>
+    <input data-path="dirs.download_dir" value="{{ config.dirs.download_dir }}">
+    <label>Export Dir</label>
+    <input data-path="dirs.export_dir" value="{{ config.dirs.export_dir }}">
+    <label>Audio Tmp</label>
+    <input data-path="dirs.audio_tmp" value="{{ config.dirs.audio_tmp }}">
+  </fieldset>
+
+  {% for jt in job_types %}
+  {% set type_key = type_key_map[jt] %}
+  <fieldset data-job-type="{{ jt }}" {% if jt != current_job_type %}style="display:none"{% endif %}>
+    <legend>{{ type_key }}</legend>
+    {% for key, value in all_type_fields[jt].items() %}
+    {% if value is sameas true or value is sameas false %}
+      <div class="job-type-check">
+        <label>
+          <input type="checkbox" data-path="{{ type_key }}.{{ key }}" {% if value %}checked{% endif %}>
+            {{ key }}
+        </label>
+      </div>
+    {% elif key in ('password', 'api_key') %}
+    <label>{{ key }}</label>
+    <input type="password" data-path="{{ type_key }}.{{ key }}" value="{{ value }}">
+    {% else %}
+    <label>{{ key }}</label>
+    <input data-path="{{ type_key }}.{{ key }}" value="{{ value }}">
+    {% endif %}
+    {% endfor %}
+  </fieldset>
+  {% endfor %}
+
+  <fieldset>
+    <legend>Email Overrides</legend>
+    <p><small>Check a field to override the global email config for this job only. Unchecked fields use the value from Email Config.</small></p>
+    {% for key in email_fields %}
+      <div class="email-fields-overwrite">
+        <label>
+          <input type="checkbox" class="eo-enable" data-key="{{ key }}" {% if key in email_overrides %}checked{% endif %} onchange="toggleEmailOverride('{{ key }}')">
+          <span>Override {{ key }}</span>
+        </label>
+      </div>
+        {% if key == 'password' %}
+        <input type="password" id="eo-value-{{ key }}" value="{{ email_overrides.get(key, '') }}" {% if key not in email_overrides %}disabled{% endif %}>
+        {% else %}
+        <input id="eo-value-{{ key }}" value="{{ email_overrides.get(key, '') }}" {% if key not in email_overrides %}disabled{% endif %}>
+        {% endif %}
+    {% endfor %}
+  </fieldset>
+
+  <fieldset>
+    <legend>Filemap</legend>
+    <div id="filemap-tracks"></div>
+    <button type="button" onclick="addFilemapTrack()">Add Track</button>
+  </fieldset>
+
+  <button type="submit">{% if is_new %}Create{% else %}Save{% endif %}</button>
+  {% if not is_new %}
+  <button type="button" onclick="runJob()">Run</button>
+  <button type="button" onclick="validateJob()">Validate</button>
+  <button type="button" onclick="deleteJob()">Delete</button>
+  {% endif %}
+</form>
+<div id="status" class="status"></div>
+<pre id="output" class="output" style="display:none"></pre>
+
+<script>
+const originalConfig = {{ config_json | safe }};
+const typeKeyMap = {{ type_key_map | tojson }};
+const isNew = {{ is_new | tojson }};
+
+renderFilemapTracks({{ config.filemap | tojson }});
+
+function toggleEmailOverride(key) {
+  const checkbox = document.querySelector(`.eo-enable[data-key="${key}"]`);
+  document.getElementById(`eo-value-${key}`).disabled = !checkbox.checked;
+}
+
+function collectEmailOverrides() {
+  const overrides = {};
+  document.querySelectorAll('.eo-enable').forEach(cb => {
+    if (!cb.checked) return;
+    const key = cb.dataset.key;
+    const raw = document.getElementById(`eo-value-${key}`).value;
+    overrides[key] = (key === 'port') ? Number(raw) : raw;
+  });
+  return overrides;
+}
+
+document.getElementById('job-type-select').addEventListener('change', function(event) {
+  document.querySelectorAll('[data-job-type]').forEach(fs => {
+    fs.style.display = (fs.dataset.jobType === event.target.value) ? '' : 'none';
+  });
+});
+
+function generateFilemap() {
+  const body = {
+    hours: Number(document.getElementById('qf-hours').value),
+    segments: Number(document.getElementById('qf-segments').value),
+    input_pattern: document.getElementById('qf-input').value,
+    output_pattern: document.getElementById('qf-output').value,
+    artist_pattern: document.getElementById('qf-artist').value,
+    title_pattern: document.getElementById('qf-title').value,
+  };
+  fetch('/api/filemap/quick', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(body),
+  })
+    .then(async r => {
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.detail || 'generate failed');
+      renderFilemapTracks(data.filemap);
+      showStatus(document.getElementById('status'), true, `Generated ${data.filemap.length} track(s) — review and ${isNew ? 'Create' : 'Save'}`);
+    })
+    .catch(e => showStatus(document.getElementById('status'), false, e.message));
+}
+
+document.getElementById('edit-form').addEventListener('submit', function(event) {
+  event.preventDefault();
+  const filename = document.getElementById('job-filename').value;
+  if (!filename) {
+    showStatus(document.getElementById('status'), false, 'Filename is required');
+    return;
+  }
+  const form = document.getElementById('edit-form');
+  const payload = {...originalConfig, ...collectPayload(form)};
+  const selectedType = payload.job.job_type;
+  for (const [jt, key] of Object.entries(typeKeyMap)) {
+    if (jt !== selectedType) delete payload[key];
+  }
+  const emailOverrides = collectEmailOverrides();
+  if (Object.keys(emailOverrides).length > 0) {
+    payload.email = emailOverrides;
+  } else {
+    delete payload.email;
+  }
+  payload.filemap = collectFilemapTracks();
+
+  if (isNew) {
+    payload.filename = filename;
+    fetch('/api/jobs', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload),
+    })
+      .then(async r => {
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.detail || 'create failed');
+        window.location.href = `/jobs/${data.filename}/edit`;
+      })
+      .catch(e => showStatus(document.getElementById('status'), false, e.message));
+  } else {
+    fetch(`/api/jobs/${filename}`, {
+      method: 'PUT',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload),
+    })
+      .then(async r => {
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.detail || 'save failed');
+        showStatus(document.getElementById('status'), true, 'Saved');
+      })
+      .catch(e => showStatus(document.getElementById('status'), false, e.message));
+  }
+});
+
+function runJob() {
+  const filename = document.getElementById('job-filename').value;
+  fetch(`/api/jobs/${filename}/run`, {method: 'POST'})
+    .then(r => r.json())
+    .then(data => showStatus(document.getElementById('status'), true, `Started (pid ${data.pid})`));
+}
+
+function validateJob() {
+  const filename = document.getElementById('job-filename').value;
+  const output = document.getElementById('output');
+  fetch(`/api/jobs/${filename}/validate`, {method: 'POST'})
+    .then(r => r.json())
+    .then(data => {
+      output.style.display = 'block';
+      output.textContent = data.output + (data.error ? `\n\nError: ${data.error}` : '');
+      showStatus(document.getElementById('status'), !data.error, data.error ? 'Validation failed' : 'Validation ok');
+    });
+}
+
+function deleteJob() {
+  const filename = document.getElementById('job-filename').value;
+  if (!confirm(`Delete ${filename}? This cannot be undone.`)) return;
+  fetch(`/api/jobs/${filename}`, {method: 'DELETE'})
+    .then(async r => {
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.detail || 'delete failed');
+      window.location.href = '/';
+    })
+    .catch(e => showStatus(document.getElementById('status'), false, e.message));
+}
+</script>
+{% endblock %}

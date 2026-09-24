@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Jobs - radautopy{% endblock %}
+{% block content %}
+<h1>Jobs</h1>
+<table>
+  <thead>
+    <tr><th>Name</th><th>Type</th><th>Runner</th><th>Cron</th><th>Actions</th></tr>
+  </thead>
+  <tbody>
+    {% for job in jobs %}
+    <tr id="row-{{ job.filename }}">
+      <td><a href="/jobs/{{ job.filename }}/edit">{{ job.job_name or job.filename }}</a></td>
+      <td>{{ job.job_type }}</td>
+      <td>{{ job.job_runner }}</td>
+      <td>{{ job.cron_expression }}</td>
+      <td class="row-actions">
+        <button onclick="runJob('{{ job.filename }}')">Run</button>
+        <button onclick="validateJob('{{ job.filename }}')">Validate</button>
+        <button onclick="deleteJob('{{ job.filename }}')">Delete</button>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+<div id="job-status" class="status"></div>
+<pre id="job-output" class="output" style="display:none"></pre>
+
+<script>
+function runJob(name) {
+  fetch(`/api/jobs/${name}/run`, {method: 'POST'})
+    .then(r => r.json())
+    .then(data => showStatus(document.getElementById('job-status'), true, `Started ${name} (pid ${data.pid})`))
+    .catch(e => showStatus(document.getElementById('job-status'), false, e));
+}
+
+function validateJob(name) {
+  const output = document.getElementById('job-output');
+  fetch(`/api/jobs/${name}/validate`, {method: 'POST'})
+    .then(r => r.json())
+    .then(data => {
+      output.style.display = 'block';
+      output.textContent = data.output + (data.error ? `\n\nError: ${data.error}` : '');
+      showStatus(document.getElementById('job-status'), !data.error, data.error ? `${name} validation failed` : `${name} validation ok`);
+    });
+}
+
+function deleteJob(name) {
+  if (!confirm(`Delete ${name}? This cannot be undone.`)) return;
+  fetch(`/api/jobs/${name}`, {method: 'DELETE'})
+    .then(async r => {
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.detail || 'delete failed');
+      document.getElementById(`row-${name}`).remove();
+      showStatus(document.getElementById('job-status'), true, `Deleted ${name}`);
+    })
+    .catch(e => showStatus(document.getElementById('job-status'), false, e.message));
+}
+</script>
+{% endblock %}

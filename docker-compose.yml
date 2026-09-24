@@ -1,0 +1,24 @@
+services:
+  scheduler:
+    build: .
+    command: radautopy-scheduler
+    volumes:
+      - radautopy-data:/data
+    restart: unless-stopped
+
+  web:
+    build: .
+    command: radautopy-web
+    ports:
+      - "8000:8000"
+    volumes:
+      - radautopy-data:/data
+    restart: unless-stopped
+
+volumes:
+  radautopy-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /home/tfinley/radautopy

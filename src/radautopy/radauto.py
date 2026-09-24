@@ -6,11 +6,7 @@ from .utils.config import LOG_DIR
 from .utils.config.config import ConfigJSON
 
 from .utils.audio import AudioFile
-from .utils.ftp import RadFTP
-from .utils.sftp import RadSFTP
-from .utils.cloud import RadCloud
-from .utils.rss import RadRSS
-from .utils.ttwn import TTWN
+from .utils.remote import build_remote
 from .utils.mail import RadMail
 from .utils.log_setup import RadLogger
 
@@ -39,18 +35,7 @@ def cli(ctx: click.Context, config_file: str, verbose: bool, disable_email:bool)
     ctx.obj['config'] = config
     ctx.obj['mailer'] = RadMail(**config.email)
     ctx.obj['email_bool'] = disable_email
-
-    job_type = config.job['job_type']
-    if 'ftp' == job_type:
-        ctx.obj['remote'] = RadFTP(**config.FTP)
-    elif 'sftp' == job_type:
-        ctx.obj['remote'] = RadSFTP(**config.SFTP)
-    elif 'cloud' == job_type:
-        ctx.obj['remote'] = RadCloud(**config.cloud)
-    elif 'rss' == job_type:
-        ctx.obj['remote'] = RadRSS(**config.rss)
-    elif 'ttwn' == job_type:
-        ctx.obj['remote'] = TTWN(**config.ttwn)
+    ctx.obj['remote'] = build_remote(config)
 
 @cli.command()
 @click.option('-t', '--tries', type=int, default=1, help='define number of tries')

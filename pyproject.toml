@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "radautopy"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
     "beautifulsoup4>=4.12.3",
     "click>=8.1.6",
@@ -20,6 +20,11 @@ dependencies = [
     "paramiko>=2.9.3",
     "python_cart_chunk>=0.0.2b2",
     "numpy>=2.1.1",
+    "APScheduler>=3.10.4",
+    "fastapi>=0.115.0",
+    "uvicorn>=0.30.0",
+    "jinja2>=3.1.4",
+    "python-multipart>=0.0.9",
 ]
 requires-python = ">=3.10"
 authors = [
@@ -35,3 +40,9 @@ license = {file = "LICENSE"}
 [project.scripts]
 radautopy = "radautopy.radauto:cli"
 radauto-config = "radautopy.radauto_config:create_modify"
+radautopy-scheduler = "radautopy.scheduler:main"
+radautopy-web = "radautopy.web.app:main"
+radautopy-json-to-sqlite = "radautopy.tools.json_to_sqlite:main"
+
+[tool.setuptools.package-data]
+"radautopy.web" = ["templates/*.html", "static/*.css"]

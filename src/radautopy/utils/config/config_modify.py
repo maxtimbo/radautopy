@@ -1,7 +1,5 @@
 import click
-import json
 import pathlib
-import subprocess
 
 from copy import copy
 from tabulate import tabulate
@@ -10,24 +8,37 @@ from crontab import CronTab
 from . import (
         CONFIG_DIR,
         EMAIL_CONFIG,
-        DEFAULT_DIRS,
         DEFAULT_FILEMAP,
         CLOUD_CONFIG,
-        JOB_METADATA,
         FTP_CONFIG,
         SFTP_CONFIG,
         RSS_CONFIG,
         TTWN_CONFIG,
+        build_dict,
 )
+from . import store
 
 from .config import ConfigJSON
 from .replace_fillers import ReplaceFillers
-from ..utilities import make_dirs, SafeDict
+from ..utilities import make_dirs, radautopy_executable, SafeDict
 
 def calculate_values(iterator: int, segments: int) -> tuple[int, int]:
     hour = (iterator - 1) // segments + 1
     segment = (iterator - 1) % segments + 1
     return hour, segment
+
+def build_quick_filemap(hours: int, segments: int, input_pattern: str, output_pattern: str, artist_pattern: str, title_pattern: str) -> list[dict]:
+    filemap = []
+    for count in range(1, hours * segments + 1):
+        hour, segment = calculate_values(count, segments)
+        context = SafeDict(hour = hour, segment = segment, count = count)
+        filemap.append({
+            'input_file': input_pattern.format_map(context),
+            'output_file': output_pattern.format_map(context),
+            'artist': artist_pattern.format_map(context),
+            'title': title_pattern.format_map(context),
+        })
+    return filemap
 
 def set_track(track: dict) -> dict:
     helper_table = [[filler, func(filler, filler)] for filler, func in ReplaceFillers('').filler_functions.items()]
@@ -43,9 +54,6 @@ def set_track(track: dict) -> dict:
 
     return track
 
-def build_dict(add_dict: dict) -> dict:
-    return JOB_METADATA | add_dict | DEFAULT_DIRS | DEFAULT_FILEMAP
-
 def set_cronjob(job_config: dict, config_file: str | pathlib.Path) -> None:
     config_file = config_file.name if isinstance(config_file, pathlib.Path) else config_file
     cron = CronTab(user=True)
@@ -54,8 +62,7 @@ def set_cronjob(job_config: dict, config_file: str | pathlib.Path) -> None:
     if existing:
         cron.remove(existing)
 
-    radautopy = subprocess.check_output('which radautopy', shell = True).strip().decode()
-    job = cron.new(command = f"{radautopy} {config_file} {job_config['job_runner']} {job_config['extra_args']}")
+    job = cron.new(command = f"{radautopy_executable()} {config_file} {job_config['job_runner']} {job_config['extra_args']}")
     job.set_comment(job_config['job_name'])
     job.setall(job_config['cron_expression'])
     cron.write()
@@ -64,7 +71,8 @@ def set_cronjob(job_config: dict, config_file: str | pathlib.Path) -> None:
 class ConfigModify:
     def __init__(self, config_type: str = None, config_file: str = None) -> None:
         self.email_config: pathlib.Path = pathlib.Path(CONFIG_DIR, "email.json")
-        if self.email_config.exists():
+        self.email_exists = store.exists("email.json")
+        if self.email_exists:
             self.email_dict = ConfigJSON().email_dict
 
         if config_file is not None:
@@ -178,10 +186,8 @@ class ConfigModify:
         self._next_continue(track)
 
     def quick_filemap(self) -> None:
-        trackobj = {k: '' for k, v in DEFAULT_FILEMAP['filemap'][0].items()}
         hours = click.prompt('How many hours?', type=int)
         segments = click.prompt('How many segments per hour?', type=int)
-        iterator = hours * segments
 
         allowed_variables = {'hour', 'segment', 'count'}
         helper_table = [[filler, func(filler, filler)] for filler, func in ReplaceFillers('').filler_functions.items()]
@@ -195,19 +201,7 @@ class ConfigModify:
         artist_pattern = click.prompt('Define an artist pattern: ', type=str)
         title_pattern = click.prompt('Define a title pattern: ', type=str)
 
-        filemap = []
-
-        for count in range(1, iterator + 1):
-            hour, segment = calculate_values(count, segments)
-            track = copy(trackobj)
-            context = SafeDict(hour = hour, segment = segment, count = count)
-            track['input_file'] = input_pattern.format_map(context)
-            track['output_file'] = output_pattern.format_map(context)
-            track['artist'] = artist_pattern.format_map(context)
-            track['title'] = title_pattern.format_map(context)
-            filemap.append(track)
-
-        self.config_dict['filemap'] = filemap
+        self.config_dict['filemap'] = build_quick_filemap(hours, segments, input_pattern, output_pattern, artist_pattern, title_pattern)
 
     def _next_continue(self, track: dict) -> None:
         condition_table = [
@@ -239,9 +233,7 @@ class ConfigModify:
     def save_config(self, config: dict, config_file: pathlib.Path) -> None:
         try:
             self.check_dirs(config)
-            make_dirs(config_file.parents[0])
-            with open(config_file, 'w', encoding='utf-8') as f:
-                json.dump(config, f, ensure_ascii=False, indent=4)
+            store.save(config_file.name, config)
 
             click.echo('Job saved successfully')
             if 'job' in config and click.confirm('Would you like to set the cronjob for this entry?'):

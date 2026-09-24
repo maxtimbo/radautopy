@@ -1,34 +1,34 @@
-import json
 import logging
 import pathlib
 
 from copy import deepcopy
 
 from . import CONFIG_DIR, LOGGER_NAME, EMAIL_CONFIG, DEFAULT_DIRS, DEFAULT_FILEMAP
+from . import store
 from .replace_fillers import ReplaceFillers
+from ..redact import redact
 
 logger = logging.getLogger(LOGGER_NAME)
 
 class ConfigJSON:
     def __init__(self, config_file: str | None = None) -> None:
         self.email_config: pathlib.Path = pathlib.Path(CONFIG_DIR, "email.json")
-        if self.email_config.exists():
-            self.email_dict = self._parse_json(self.email_config)
+        if store.exists("email.json"):
+            self.email_dict = self._parse_json("email.json")
         else:
             raise FileNotFoundError
 
         if config_file is not None:
             self.config_file: pathlib.Path = pathlib.Path(CONFIG_DIR, config_file)
-            if self.config_file.exists():
-                self.config_dict = self._parse_json(self.config_file)
+            if store.exists(config_file):
+                self.config_dict = self._parse_json(config_file)
             else:
                 raise FileNotFoundError
 
-    def _parse_json(self, config_file: pathlib.Path) -> dict:
+    def _parse_json(self, filename: str) -> dict:
         try:
-            with open(config_file, 'r') as f:
-                config = json.load(f)
-            logger.debug(f'{config_file} loaded sucessfully')
+            config = store.get(filename)
+            logger.debug(f'{filename} loaded sucessfully')
             self._set_attributes(config)
             return config
         except Exception as e:
@@ -51,10 +51,10 @@ class ConfigJSON:
                     for k, v in config['email'].items():
                         self.email[k] = v
                         self.email_dict['email'][k] = v
-                        logger.debug(f'overridding {k} to {v}')
+                        logger.debug(f'overridding {k} to {redact({k: v})[k]}')
                 else:
                     setattr(self, key, deepcopy(config[key]))
-                    logger.debug(f'setting attr {key} as {config[key]}')
+                    logger.debug(f'setting attr {key} as {redact(config[key])}')
             else:
                 self.filemap = deepcopy(config['filemap'])
                 for track in self.filemap:

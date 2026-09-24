@@ -1,21 +1,23 @@
 import logging
 import pathlib
+import sys
 import traceback
 
 from . import LOGGER_NAME
 
 logger = logging.getLogger(LOGGER_NAME)
 
+def radautopy_executable() -> str:
+    candidate = pathlib.Path(sys.executable).parent / "radautopy"
+    return str(candidate) if candidate.exists() else "radautopy"
+
 def make_dirs(path: pathlib.Path | str) -> pathlib.Path:
-    if pathlib.Path.is_dir(path):
-        logger.info(f'{path} already exists')
-    else:
-        try:
-            pathlib.Path.mkdir(path, parents=True)
-            logger.info(f'{path} created')
-        except FileNotFoundError as exc:
-            logger.exception(FileNotFoundError(traceback.format_exc()))
-            raise
+    try:
+        pathlib.Path.mkdir(path, parents=True, exist_ok=True)
+        logger.info(f'{path} ready')
+    except FileNotFoundError as exc:
+        logger.exception(FileNotFoundError(traceback.format_exc()))
+        raise
     return path
 
 def handle_status_code(status_code: int, mailer) -> bool:

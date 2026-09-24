@@ -1,0 +1,163 @@
+:root {
+    --font: #1a1a1a;
+    --accent1: #8a2f1b;
+    --border: #ddd;
+    --accent2: #f4f4f4;
+    --alert: #b00020;
+    --ok: #146c2e;
+}
+
+body { 
+    font-family: system-ui, sans-serif;
+    max-width: 860px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+    color: var(--bg);
+}
+
+a {
+    color: var(--accent1);
+}
+
+nav {
+    margin-bottom: 1.5rem;
+}
+
+nav a { 
+    margin-right: 1rem; 
+}
+
+table { 
+    border-collapse: collapse; 
+    width: 100%; 
+}
+
+th, td { 
+    text-align: left;
+    padding: 0.4rem 0.6rem;
+    border-bottom: 1px solid var(--border);
+}
+
+form.field-form label {
+    display: block;
+    margin-top: 0.8rem;
+    font-weight: 600;
+}
+
+form.field-form input, form.field-form select, form.field-form textarea {
+    width: 100%;
+    padding: 0.4rem;
+    margin-top: 0.2rem;
+    box-sizing: border-box;
+    font-family: inherit;
+}
+
+fieldset {
+    margin-top: 1.2rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+}
+
+legend {
+    font-weight: 700;
+    padding: 0 0.4rem;
+}
+
+button {
+    margin-top: 1rem;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+}
+
+.row-actions button {
+    margin: 0 0.2rem 0 0;
+    padding: 0.2rem 0.6rem;
+}
+
+pre.output {
+    background: var(--accent2);
+    padding: 0.8rem;
+    white-space: pre-wrap;
+    border-radius: 6px;
+    max-height: 300px;
+    overflow: auto;
+}
+
+.status {
+    margin-top: 0.6rem;
+    font-weight: 600;
+}
+
+.status.error {
+    color: var(--alert);
+}
+
+.status.ok {
+    color: var(--ok);
+}
+
+.filemap-track {
+    display: flex;
+    align-items: flex-end;
+    gap: 0.5rem;
+    margin-top: 0.6rem;
+    flex-wrap: wrap;
+    padding-bottom: 0.6rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.filemap-track label {
+    display: flex;
+    flex-direction: column;
+    font-size: 0.8rem;
+    font-weight: 600;
+    flex: 1;
+    min-width: 120px;
+}
+
+.filemap-track input {
+    font-weight: 400;
+    padding: 0.3rem;
+    margin-top: 0.2rem;
+}
+
+.filemap-track button {
+    margin-top: 0;
+    padding: 0.3rem 0.6rem;
+}
+
+.email-fields-overwrite, .job-type-check {
+    display: flex;
+}
+
+.job-type-check label {
+    display: flex !important;
+    justify-content: flex-start;
+    flex-direction: row;
+    gap: 25px;
+}
+
+.email-fields-overwrite label {
+    display: flex !important;
+    justify-content: flex-start;
+    flex-direction: row;
+    gap: 25px;
+}
+
+.eo-enable {
+    order: 0;
+    flex: 1 0;
+}
+
+.email-fields-overwrite span {
+    order: 1;
+}
+
+.fm-gen, .fm-cluster {
+    display: flex;
+    flex-direction: column;
+}
+
+.fm-gen {
+    gap: 10px 30px;
+}
