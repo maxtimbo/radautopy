@@ -1,7 +1,7 @@
 # radautopy
 
 ### Radautopy Now Uses Docker
-This new system uses docker to containerize everything. I've moved to using APScheduler instead of cron and built a simple web app for configuration. I've added rclone-web to manage rclone as well. Most everything can be setup in rclone-web and then automated using radautopy. This also moves files, renames them, and adds metadata with the scott header (Wide Orbit). 
+This new system uses docker to containerize everything. I've moved to using APScheduler instead of cron and built a simple web app for configuration. I've added [rclone-web](https://github.com/rclone/rclone-web) to manage rclone as well. Most everything can be setup in rclone-web and then automated using radautopy. This also moves files, renames them, and adds metadata with the scott header (Wide Orbit). 
 
 ### Requirements
 
