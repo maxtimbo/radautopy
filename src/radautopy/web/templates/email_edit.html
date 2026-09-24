@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Email Config - radautopy{% endblock %}
+{% block content %}
+<h1>Email Config</h1>
+{% if not exists %}<p><em>No email.json yet — this form will create it.</em></p>{% endif %}
+<form class="field-form" id="edit-form">
+  <fieldset>
+    <legend>email</legend>
+    <label>Sender</label>
+    <input data-path="email.sender" value="{{ config.email.sender }}">
+    <label>Subject</label>
+    <input data-path="email.subject" value="{{ config.email.subject }}">
+    <label>Server</label>
+    <input data-path="email.server" value="{{ config.email.server }}">
+    <label>Port</label>
+    <input data-path="email.port" data-type="number" value="{{ config.email.port }}">
+    <label>Username</label>
+    <input data-path="email.username" value="{{ config.email.username }}">
+    <label>Password</label>
+    <input type="password" data-path="email.password" value="{{ config.email.password }}">
+    <label>Reply To</label>
+    <input data-path="email.reply_to" value="{{ config.email.reply_to }}">
+    <label>Recipient</label>
+    <input data-path="email.recipient" value="{{ config.email.recipient }}">
+    <label>Header</label>
+    <input data-path="email.header" value="{{ config.email.header }}">
+    <label>Footer</label>
+    <input data-path="email.footer" value="{{ config.email.footer }}">
+  </fieldset>
+  <button type="submit">Save</button>
+  <button type="button" onclick="testEmail()">Test Email</button>
+</form>
+<div id="status" class="status"></div>
+<pre id="output" class="output" style="display:none"></pre>
+
+<script>
+document.getElementById('edit-form').addEventListener('submit', function(event) {
+  event.preventDefault();
+  const payload = collectPayload(document.getElementById('edit-form'));
+  fetch('/api/email', {
+    method: 'PUT',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(payload),
+  })
+    .then(async r => {
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.detail || 'save failed');
+      showStatus(document.getElementById('status'), true, 'Saved');
+    })
+    .catch(e => showStatus(document.getElementById('status'), false, e.message));
+});
+
+function testEmail() {
+  const output = document.getElementById('output');
+  showStatus(document.getElementById('status'), true, 'Sending test email using the saved config…');
+  fetch('/api/email/validate', {method: 'POST'})
+    .then(async r => {
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.detail || 'test failed');
+      output.style.display = 'block';
+      output.textContent = data.output + (data.error ? `\n\nError: ${data.error}` : '');
+      const sent = data.output.includes('Email sent successfully');
+      showStatus(document.getElementById('status'), sent, sent ? 'Test email sent' : 'Test email failed');
+    })
+    .catch(e => showStatus(document.getElementById('status'), false, e.message));
+}
+</script>
+{% endblock %}

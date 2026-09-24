@@ -5,6 +5,7 @@ import pathlib
 import paramiko
 
 from . import LOGGER_NAME
+from .redact import MASK
 
 logger = logging.getLogger(LOGGER_NAME)
 
@@ -32,7 +33,7 @@ class RadSFTP:
         click.echo('~~ SFTP Settings ~~')
         click.echo(f'server: {self.server}')
         click.echo(f'username: {self.username}')
-        click.echo(f'password: {self.password}')
+        click.echo(f'password: {MASK}')
         click.echo(f'directory: {self.directory}')
         try:
             files = self.do_action(self.list_remote)

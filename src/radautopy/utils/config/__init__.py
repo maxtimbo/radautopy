@@ -1,10 +1,12 @@
+import os
 import pathlib
 
 LOGGER_NAME = "RadioAutoPy Logger"
 
-ROOT_DIR = pathlib.Path("~/radautopy").expanduser()
+ROOT_DIR = pathlib.Path(os.environ.get("RADAUTOPY_ROOT", "~/radautopy")).expanduser()
 LOG_DIR = pathlib.Path(ROOT_DIR, "log")
 CONFIG_DIR = pathlib.Path(ROOT_DIR, "config")
+DB_PATH = pathlib.Path(os.environ.get("RADAUTOPY_DB", str(ROOT_DIR / "radautopy.db"))).expanduser()
 
 DOWNLOAD_DIR = pathlib.Path(ROOT_DIR, "download")
 EXPORT_DIR = pathlib.Path(ROOT_DIR, "export")
@@ -94,3 +96,17 @@ TTWN_CONFIG = {
         "api_key": str
     }
 }
+
+JOB_TYPE_SKELETONS = {
+    "ftp": FTP_CONFIG,
+    "sftp": SFTP_CONFIG,
+    "cloud": CLOUD_CONFIG,
+    "rss": RSS_CONFIG,
+    "ttwn": TTWN_CONFIG,
+}
+
+JOB_RUNNERS = ["news", "standard", "split_single", "ttwn"]
+
+
+def build_dict(add_dict: dict) -> dict:
+    return JOB_METADATA | add_dict | DEFAULT_DIRS | DEFAULT_FILEMAP

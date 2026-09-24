@@ -11,6 +11,7 @@ from email.mime.audio import MIMEAudio
 from email.mime.application import MIMEApplication
 
 from . import LOGGER_NAME
+from .redact import MASK
 
 
 logger = logging.getLogger(LOGGER_NAME)
@@ -106,7 +107,7 @@ class RadMail:
 
         return msg
 
-    def send_mail(self, alt_sender: str = None, alt_subject: str = None) -> None:
+    def send_mail(self, alt_sender: str = None, alt_subject: str = None, raise_on_error: bool = False) -> None:
         if alt_sender is not None:
             self.sender = alt_sender
             logger.info(f"sender overwritten at send - {alt_sender}")
@@ -125,20 +126,22 @@ class RadMail:
                 smtp.sendmail(self.sender, self.recipient, msg.as_string())
         except Exception as e:
             logger.exception(e)
+            if raise_on_error:
+                raise
 
     def validate(self) -> None:
         print('~~ Mail Settings ~~')
         print(f'server:port: {self.server}:{self.port}')
         print(f'username: {self.username}')
-        print(f'password: {self.password}')
+        print(f'password: {MASK}')
         print(f'reply-to: {self.reply_to}')
         print(f'recipient: {self.recipient}')
         self.message = "Test successful!"
         try:
-            self.send_mail("Mailer Test", "Mailer Test Successful")
+            self.send_mail("Mailer Test", "Mailer Test Successful", raise_on_error=True)
             print('~~ Email sent successfully ~~')
-        except:
-            print('~~ Email failed! ~~')
+        except Exception as e:
+            print(f'~~ Email failed! {e} ~~')
 
     def add_attachment(self, filename: pathlib.Path, subtype: str) -> None:
         self.attachments.append(Attachment(filename, subtype))

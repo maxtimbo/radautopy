@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>{% block title %}radautopy{% endblock %}</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<nav>
+  <a href="/">Jobs</a>
+  <a href="/jobs/new">New Job</a>
+  <a href="/email/edit">Email Config</a>
+  <a href="/logs">Logs</a>
+  <a href="/rclone" target="_blank">rclone Remotes</a>
+</nav>
+<script>
+function collectPayload(form) {
+  const payload = {};
+  form.querySelectorAll('[data-path]').forEach(el => {
+    const path = el.dataset.path.split('.');
+    let obj = payload;
+    for (let i = 0; i < path.length - 1; i++) {
+      obj[path[i]] = obj[path[i]] || {};
+      obj = obj[path[i]];
+    }
+    const leaf = path[path.length - 1];
+    if (el.type === 'checkbox') {
+      obj[leaf] = el.checked;
+    } else if (el.dataset.type === 'number') {
+      obj[leaf] = Number(el.value);
+    } else {
+      obj[leaf] = el.value;
+    }
+  });
+  return payload;
+}
+
+function showStatus(el, ok, message) {
+  el.textContent = message;
+  el.className = 'status ' + (ok ? 'ok' : 'error');
+}
+
+const FILEMAP_FIELDS = ['input_file', 'output_file', 'artist', 'title'];
+
+function buildFilemapTrackRow(track) {
+  const row = document.createElement('div');
+  row.className = 'filemap-track';
+  FILEMAP_FIELDS.forEach(field => {
+    const label = document.createElement('label');
+    label.textContent = field;
+    const input = document.createElement('input');
+    input.className = 'filemap-field';
+    input.dataset.field = field;
+    input.value = track[field] || '';
+    label.appendChild(input);
+    row.appendChild(label);
+  });
+  const dup = document.createElement('button');
+  dup.type = 'button';
+  dup.textContent = 'Duplicate';
+  dup.onclick = () => row.after(buildFilemapTrackRow(readFilemapRow(row)));
+  row.appendChild(dup);
+  const remove = document.createElement('button');
+  remove.type = 'button';
+  remove.textContent = 'Remove';
+  remove.onclick = () => row.remove();
+  row.appendChild(remove);
+  return row;
+}
+
+function readFilemapRow(row) {
+  const track = {};
+  row.querySelectorAll('.filemap-field').forEach(input => track[input.dataset.field] = input.value);
+  return track;
+}
+
+function renderFilemapTracks(tracks) {
+  const container = document.getElementById('filemap-tracks');
+  container.innerHTML = '';
+  tracks.forEach(track => container.appendChild(buildFilemapTrackRow(track)));
+}
+
+function addFilemapTrack() {
+  document.getElementById('filemap-tracks').appendChild(buildFilemapTrackRow({}));
+}
+
+function collectFilemapTracks() {
+  return Array.from(document.querySelectorAll('#filemap-tracks .filemap-track')).map(readFilemapRow);
+}
+</script>
+{% block content %}{% endblock %}
+</body>
+</html>

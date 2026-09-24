@@ -5,6 +5,7 @@ import pathlib
 from ftplib import FTP, error_perm
 
 from . import LOGGER_NAME
+from .redact import MASK
 
 logger = logging.getLogger(LOGGER_NAME)
 
@@ -63,7 +64,7 @@ class RadFTP:
         click.echo('~~ FTP Settings ~~')
         click.echo(f'server: {self.server}')
         click.echo(f'username: {self.username}')
-        click.echo(f'password: {self.password}')
+        click.echo(f'password: {MASK}')
         click.echo(f'directory: {self.directory}')
         try:
             files = self.do_action(self.list_remote)

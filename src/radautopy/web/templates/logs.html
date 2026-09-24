@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Logs - radautopy{% endblock %}
+{% block content %}
+<h1>Logs</h1>
+<div class="field-form">
+  <label>Log file</label>
+  <select id="log-name">
+    {% for name in log_names %}
+    <option value="{{ name }}">{{ name }}</option>
+    {% endfor %}
+  </select>
+  <label>Lines</label>
+  <input type="number" id="log-lines" value="200" min="1">
+  <label><input type="checkbox" id="log-auto"> Auto-refresh (5s)</label>
+  <button type="button" onclick="refreshLog()">Refresh</button>
+</div>
+<pre id="log-output" class="output"></pre>
+
+<script>
+let autoTimer = null;
+
+function refreshLog() {
+  const name = document.getElementById('log-name').value;
+  const lines = document.getElementById('log-lines').value;
+  fetch(`/api/log?name=${encodeURIComponent(name)}&lines=${encodeURIComponent(lines)}`)
+    .then(r => r.text())
+    .then(text => {
+      const output = document.getElementById('log-output');
+      output.textContent = text || '(empty)';
+      output.scrollTop = output.scrollHeight;
+    });
+}
+
+document.getElementById('log-auto').addEventListener('change', function(event) {
+  if (event.target.checked) {
+    autoTimer = setInterval(refreshLog, 5000);
+  } else if (autoTimer) {
+    clearInterval(autoTimer);
+    autoTimer = null;
+  }
+});
+
+refreshLog();
+</script>
+{% endblock %}

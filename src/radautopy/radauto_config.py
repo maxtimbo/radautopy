@@ -1,16 +1,12 @@
 import click
 
-from .utils.config import CONFIG_DIR
+from .utils.config import store
 from .utils.config.config_modify import ConfigModify
 from .utils.config.config_modify import set_cronjob as preform_set_cronjob
 from .utils.config.config import ConfigJSON
 
-from .utils.cloud import RadCloud
-from .utils.ftp import RadFTP
-from .utils.sftp import RadSFTP
 from .utils.mail import RadMail
-from .utils.rss import RadRSS
-from .utils.ttwn import TTWN
+from .utils.remote import build_remote
 
 @click.group()
 def create_modify():
@@ -25,9 +21,8 @@ def list_configs():
     Returns the list of available configs
     """
     try:
-        contents = CONFIG_DIR.iterdir()
-        for item in contents:
-            click.echo(item.name)
+        for name in store.list_names():
+            click.echo(name)
     except Exception as e:
         click.echo(f'Error {e}')
 
@@ -49,7 +44,7 @@ def create(config_type, config_file):
         ctx.exit()
     else:
         config = ConfigModify(config_type, config_file)
-        if not config.email_config.exists():
+        if not config.email_exists:
             config.set_email()
 
         config.set_config()
@@ -93,16 +88,6 @@ def validate(config_file):
         mailer.validate()
     else:
         config = ConfigJSON(config_file)
-        if 'ftp' == config.job['job_type']:
-            remote = RadFTP(**config.FTP)
-        elif 'sftp' == config.job['job_type']:
-            remote = RadSFTP(**config.SFTP)
-        elif 'cloud' == config.job['job_type']:
-            remote = RadCloud(**config.cloud)
-        elif 'rss' == config.job['job_type']:
-            remote = RadRSS(**config.rss)
-        elif 'ttwn' == config.job['job_type']:
-            remote = TTWN(**config.ttwn)
-
+        remote = build_remote(config)
         remote.validate()
 
