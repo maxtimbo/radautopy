@@ -1,27 +1,57 @@
 # radautopy
 
+### Radautopy Now Uses Docker
+This new system uses docker to containerize everything. I've moved to using APScheduler instead of cron and built a simple web app for configuration. I've added rclone-web to manage rclone as well. Most everything can be setup in rclone-web and then automated using radautopy. This also moves files, renames them, and adds metadata with the scott header (Wide Orbit). 
+
 ### Requirements
 
-`radautopy` assumes that `ffmpeg` and `rclone` is installed on your system. See [more about rclone](https://rclone.org/). `radautopy` has been tested against a NextCloud provider using `rclone`.
+You just need Docker and Docker Compose
 
 ### Installation
 
-Install dependencies:
+Clone this repo and configure `docker-compose.yml` and `.env`.
+
+To setup, some key changes to docker-compose file must be made.
+
+The `volumes` section has `radautopy-data` setup for each service and that must be the same for all. Any other volumes for export should also be configured in a similar fashion across all containers.
 
 ```
-$ sudo apt install rclone ffmpeg -y
+services:
+  scheduler:
+    volumes:
+      - radautopy-data:/data
+  web:
+    volumes:
+      - radautopy-data:/data
+  rclone-gui:
+    volumes:
+      - radautopy-data:/data
+
+volumes:
+  radautopy-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /home/tfinley/radautopy
 ```
 
-Clone this repo and install via pip:
+You can set different ports for the web-gui:
 
 ```
-$ git clone https://github.com/maxtimbo/radautopy.git
-$ cd radautopy
-$ pip install .
+  web:
+    ports:
+      - "8000:8000"
 ```
+
+Copy the `.env.sample` to `.env` and fill out the user/password for rclone. This is the only time this needs to be configured.
+
+Then just run `docker compose up -d --build` to build the containers and start the app. Point a web browser to `[computer.ip]:[web-port]` or `localhost:[web-port]` if you're running on the same machine.
 
 
 ### Initial Setup
+#### The following is legacy, but gives a good idea of how the web gui works.
+#### To-Do: Update this section.
 
 Installing creates two cli tools. `radauto-config` and `radautopy`.  
 `radauto-config` will allow you to quckly create configs for shows and other jobs. The initial run will create a new directory tree in your user home:
@@ -183,6 +213,8 @@ You can check the log output of all jobs in `~/radautopy/log/radautopy.log`
 ```
 
 #### Example rclone Config
+
+`server` is the name of a remote in rclone's config. In Docker, remotes are managed through the bundled [rclone web GUI](https://github.com/rclone/rclone-web) (the **rclone Remotes** link in the web UI, port 5522). Set `RCLONE_GUI_PASS` (and optionally `RCLONE_GUI_USER`) in a `.env` next to `docker-compose.yml` first.
 
 ```
 {

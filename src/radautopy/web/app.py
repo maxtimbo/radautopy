@@ -1,15 +1,17 @@
 import io
 import json
+import os
 import shlex
 import subprocess
 from contextlib import redirect_stdout
 from copy import deepcopy
 from datetime import datetime, timezone
 from pathlib import Path
+from urllib.parse import urlencode
 
 import uvicorn
 from fastapi import Body, FastAPI, HTTPException
-from fastapi.responses import PlainTextResponse
+from fastapi.responses import PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.requests import Request
@@ -305,8 +307,21 @@ def email_edit_page(request: Request):
     })
 
 
+@app.get("/rclone")
+def rclone_gui(request: Request):
+    # rclone-web only keeps the API url if login succeeds, so the link must carry credentials
+    host = request.url.hostname
+    gui_port = os.environ.get("RCLONE_GUI_PORT", "5522")
+    api_port = os.environ.get("RCLONE_API_PORT", "5533")
+    query = urlencode({
+        "url": f"{request.url.scheme}://{host}:{api_port}/",
+        "user": os.environ.get("RCLONE_GUI_USER", ""),
+        "pass": os.environ.get("RCLONE_GUI_PASS", ""),
+    })
+    return RedirectResponse(f"{request.url.scheme}://{host}:{gui_port}/login?{query}")
+
+
 def main() -> None:
-    import os
     host = os.environ.get("RADAUTOPY_WEB_HOST", "0.0.0.0")
     port = int(os.environ.get("RADAUTOPY_WEB_PORT", "8000"))
     uvicorn.run(app, host=host, port=port)

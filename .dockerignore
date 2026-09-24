@@ -5,3 +5,4 @@ src/radautopy.egg-info/
 **/__pycache__/
 **/*.pyc
 radautopy-TODO.md
+.env
