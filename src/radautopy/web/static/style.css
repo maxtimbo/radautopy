@@ -5,6 +5,7 @@
     --accent2: #f4f4f4;
     --alert: #b00020;
     --ok: #146c2e;
+    --warn: #8a5a00;
 }
 
 body { 
@@ -195,4 +196,18 @@ pre.output {
 
 .cron-description {
     font-weight: 600;
+}
+
+.status.warn {
+    color: var(--warn);
+}
+
+.status .warnings {
+    margin: 0.3rem 0;
+    padding-left: 1.2rem;
+    font-weight: normal;
+}
+
+.needs-attention {
+    color: var(--warn);
 }

@@ -1,3 +1,4 @@
+import logging
 import shlex
 import subprocess
 
@@ -12,6 +13,12 @@ LOG_FILE = LOG_DIR / "radautopy-scheduler.log"
 RESCAN_SECONDS = 60
 
 logger = RadLogger(LOG_FILE).get_logger()
+OUTPUT_TAIL_LINES = 20
+
+# surface APScheduler's own warnings (skipped or missed runs) in the scheduler log
+for handler in logger.handlers:
+    logging.getLogger("apscheduler").addHandler(handler)
+logging.getLogger("apscheduler").setLevel(logging.WARNING)
 
 
 def _load_jobs() -> dict[str, dict]:
@@ -26,12 +33,26 @@ def _load_jobs() -> dict[str, dict]:
     return jobs
 
 
+def _tail(text: str) -> str:
+    return "\n".join(text.strip().splitlines()[-OUTPUT_TAIL_LINES:])
+
+
 def _run_job(config_name: str, job_runner: str, extra_args: str) -> None:
-    command = [radautopy_executable(), config_name, job_runner, *shlex.split(extra_args)]
-    logger.info(f"running {' '.join(command)}")
-    result = subprocess.run(command, capture_output=True, text=True)
+    try:
+        args = shlex.split(extra_args or "")
+    except ValueError as e:
+        logger.error(f"{config_name} not run: extra_args is invalid ({e})")
+        return
+    try:
+        command = [radautopy_executable(), config_name, job_runner, *args]
+        logger.info(f"running {' '.join(command)}")
+        result = subprocess.run(command, capture_output=True, text=True)
+    except Exception:
+        logger.exception(f"{config_name} could not be started")
+        return
     if result.returncode != 0:
-        logger.error(f"{config_name} exited {result.returncode}: {result.stderr}")
+        output = _tail(result.stderr) or _tail(result.stdout) or "no output; see radautopy.log"
+        logger.error(f"{config_name} failed with exit code {result.returncode}:\n{output}")
     else:
         logger.info(f"{config_name} completed")
 
@@ -61,7 +82,7 @@ class JobSync:
                 _run_job,
                 trigger=trigger,
                 id=config_name,
-                args=[config_name, job["job_runner"], job.get("extra_args", "")],
+                args=[config_name, job.get("job_runner", ""), job.get("extra_args", "")],
                 replace_existing=True,
             )
             logger.info(f"scheduled {config_name}: {job['cron_expression']}")

@@ -90,6 +90,31 @@ Each job's **Cron Expression** uses standard crontab syntax (`minute hour day mo
 - Untick **Enabled** (on the job list or the job form) to pause scheduled runs without deleting the job. A disabled job can still be run with the **Run** button.
 - The scheduler checks for changes every 60 seconds, so there is no need to restart it after editing a job.
 
+#### Job Types and Runners
+
+A job's **Job Type** is where its audio comes from, and its **Job Runner** is how the files are processed. Not every pair works:
+
+| Runner | What it does | Supported job types |
+| --- | --- | --- |
+| `standard` | Downloads each filemap track, adds metadata, moves it to `export_dir` | ftp, sftp, cloud |
+| `news` | Like `standard`, but retries until every file has changed since the last run | ftp, sftp, cloud |
+| `split_single` | Downloads the newest RSS episode and splits it on silence into the filemap tracks | rss |
+| `ttwn` | Downloads the newest TTWN file | ttwn |
+
+The job list and job form flag jobs that need attention, such as a missing job type, an unsupported runner, an empty filemap, an invalid cron expression, or a directory the containers cannot write to. Saving a job always keeps your changes and lists any problems under the status line.
+
+#### Email Reports
+
+Each job has an **Email** setting on the job form:
+
+- **Always email**: send a report after every run that has something to report. Failed runs use the subject `FAILED: <subject>`.
+- **Email on failure only**: send a report only when the run fails.
+- **Never email**: never send a report.
+
+Jobs without the setting default to **Always email**. From the command line, `--email always|failure|never` overrides the job's setting for one run, and `--disable_email` is the same as `--email never`.
+
+A run counts as failed when it could not start (for example a missing job type or email config), when a remote could not be reached, or when any file failed to download, convert or move. Other files in the same run are still delivered. A failed run exits with code 1, and the scheduler log shows the reason.
+
 #### rclone Remotes
 
 The **rclone Remotes** page embeds the rclone web GUI, already logged in. Use it to create the remotes that `cloud` jobs download from; the remote's name goes in the job's `server` field. The page also has a link to open the GUI in its own tab.
@@ -103,7 +128,7 @@ docker compose up -d --build
 
 #### Logs
 
-Job output goes to `<data dir>/log/radautopy.log` and scheduler output to `<data dir>/log/radautopy-scheduler.log`. Both can also be viewed on the web UI's Logs page.
+Job output goes to `<data dir>/log/radautopy.log` and scheduler output to `<data dir>/log/radautopy-scheduler.log`. Both can also be viewed on the web UI's Logs page. When a scheduled run fails, the scheduler log shows its exit code and the reason, and `radautopy.log` has the full details.
 
 #### Migrating from JSON configs
 
@@ -153,7 +178,7 @@ During job configuration, you will be offered three ways to build a filemap:
 
 #### Usage
 
-You can test a job with `radautopy [job_name.json] [job_runner] {optional_extra_args}`, or with the Run button in the web UI.
+You can test a job with `radautopy [job_name.json] [job_runner] {optional_extra_args}`, or with the Run button in the web UI. Add `--email never` in front of the job name to test without sending a report, for example `radautopy --email never MyCoolShow.json standard`.
 
 ### Config Templates
 
@@ -231,7 +256,8 @@ You can test a job with `radautopy [job_name.json] [job_runner] {optional_extra_
     "cron_expression": str,
     "job_runner": str,
     "extra_args": "",
-    "enabled": boolean
+    "enabled": boolean,
+    "email_mode": "always" | "failure" | "never"
   }
 }
 ```

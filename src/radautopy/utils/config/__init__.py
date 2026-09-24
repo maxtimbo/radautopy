@@ -36,6 +36,7 @@ JOB_METADATA = {
         "job_runner": str,
         "extra_args": "",
         "enabled": True,
+        "email_mode": "always",
     }
 }
 
@@ -107,6 +108,15 @@ JOB_TYPE_SKELETONS = {
 }
 
 JOB_RUNNERS = ["news", "standard", "split_single", "ttwn"]
+
+RUNNER_SUPPORT = {
+    "standard": ["ftp", "sftp", "cloud"],
+    "news": ["ftp", "sftp", "cloud"],
+    "split_single": ["rss"],
+    "ttwn": ["ttwn"],
+}
+
+EMAIL_MODES = ["always", "failure", "never"]
 
 
 def build_dict(add_dict: dict) -> dict:

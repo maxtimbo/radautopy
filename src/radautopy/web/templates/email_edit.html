@@ -37,14 +37,8 @@
 document.getElementById('edit-form').addEventListener('submit', function(event) {
   event.preventDefault();
   const payload = collectPayload(document.getElementById('edit-form'));
-  fetch('/api/email', {
-    method: 'PUT',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify(payload),
-  })
-    .then(async r => {
-      const data = await r.json();
-      if (!r.ok) throw new Error(data.detail || 'save failed');
+  apiFetch('/api/email', {method: 'PUT', json: payload})
+    .then(() => {
       showStatus(document.getElementById('status'), true, 'Saved');
     })
     .catch(e => showStatus(document.getElementById('status'), false, e.message));
@@ -53,10 +47,8 @@ document.getElementById('edit-form').addEventListener('submit', function(event) 
 function testEmail() {
   const output = document.getElementById('output');
   showStatus(document.getElementById('status'), true, 'Sending test email using the saved config…');
-  fetch('/api/email/validate', {method: 'POST'})
-    .then(async r => {
-      const data = await r.json();
-      if (!r.ok) throw new Error(data.detail || 'test failed');
+  apiFetch('/api/email/validate', {method: 'POST'})
+    .then(data => {
       output.style.display = 'block';
       output.textContent = data.output + (data.error ? `\n\nError: ${data.error}` : '');
       const sent = data.output.includes('Email sent successfully');

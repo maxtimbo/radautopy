@@ -1,5 +1,6 @@
 import io
 import json
+import logging
 import os
 import shlex
 import subprocess
@@ -11,7 +12,7 @@ from urllib.parse import urlencode
 
 import uvicorn
 from fastapi import Body, FastAPI, HTTPException
-from fastapi.responses import PlainTextResponse, RedirectResponse
+from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.requests import Request
@@ -22,23 +23,38 @@ from ..utils.config import (
     DEFAULT_DIRS,
     JOB_TYPE_SKELETONS,
     JOB_RUNNERS,
+    EMAIL_MODES,
     build_dict,
     store,
 )
 from ..utils.config.config import ConfigJSON
 from ..utils.config.config_modify import build_quick_filemap
 from ..utils.config.replace_fillers import ReplaceFillers
-from ..utils.cron import describe, next_runs
+from ..utils.cron import describe, next_runs, trigger_from_crontab
+from ..utils.errors import ConfigError, RadautopyError
 from ..utils.mail import RadMail
-from ..utils.remote import build_remote
-from ..utils.utilities import make_dirs, radautopy_executable
+from ..utils.remote import build_remote, check_runner
+from ..utils.utilities import check_writable, make_dirs, radautopy_executable
 
 RADAUTOPY_LOG = LOG_DIR / "radautopy.log"
 KNOWN_LOGS = ["radautopy.log", "radautopy-scheduler.log"]
 
+logger = logging.getLogger("uvicorn.error")
+
 app = FastAPI(title="radautopy control layer")
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 app.mount("/static", StaticFiles(directory=str(Path(__file__).parent / "static")), name="static")
+
+
+@app.exception_handler(RadautopyError)
+async def radautopy_error_handler(request: Request, exc: RadautopyError) -> JSONResponse:
+    return JSONResponse(status_code=400, content={"detail": str(exc)})
+
+
+@app.exception_handler(Exception)
+async def unhandled_error_handler(request: Request, exc: Exception) -> JSONResponse:
+    logger.exception(f"{request.method} {request.url.path} failed")
+    return JSONResponse(status_code=500, content={"detail": f"server error: {type(exc).__name__}: {exc}"})
 
 
 def _job_name(name: str) -> str:
@@ -56,11 +72,51 @@ def _read_config(name: str) -> dict:
         raise HTTPException(status_code=404, detail=f"{name} not found")
 
 
-def _write_config(name: str, data: dict) -> None:
-    if "dirs" in data:
-        for v in data["dirs"].values():
-            make_dirs(Path(v))
+def _job_warnings(config: dict) -> list[str]:
+    job = config.get("job")
+    if not isinstance(job, dict):
+        return ["config has no 'job' section"]
+    warnings = []
+    try:
+        check_runner(job.get("job_type"), job.get("job_runner"))
+    except ConfigError as e:
+        warnings.append(str(e))
+    if job.get("email_mode", "always") not in EMAIL_MODES:
+        warnings.append(f"email_mode must be one of {', '.join(EMAIL_MODES)}")
+    if job.get("cron_expression"):
+        try:
+            trigger_from_crontab(job["cron_expression"])
+        except ValueError as e:
+            warnings.append(f"cron expression is invalid, so the job will not be scheduled: {e}")
+    try:
+        shlex.split(job.get("extra_args") or "")
+    except ValueError as e:
+        warnings.append(f"extra_args is invalid: {e}")
+    if not config.get("filemap"):
+        warnings.append("filemap is empty; the job will fail until at least one track is added")
+    return warnings
+
+
+def _dir_warnings(config: dict) -> list[str]:
+    warnings = []
+    for key, path in (config.get("dirs") or {}).items():
+        if not path:
+            warnings.append(f"{key} is empty")
+            continue
+        try:
+            check_writable(Path(path))
+        except ConfigError as e:
+            warnings.append(f"{key}: {e}")
+    return warnings
+
+
+def _write_config(name: str, data: dict) -> list[str]:
+    if not isinstance(data, dict):
+        raise HTTPException(status_code=400, detail="config must be a JSON object")
     store.save(name, data)
+    if name == "email.json":
+        return []
+    return _job_warnings(data) + _dir_warnings(data)
 
 
 def _replace_type_markers(section: dict) -> dict:
@@ -89,6 +145,7 @@ def list_jobs() -> list[dict]:
             "cron_expression": job.get("cron_expression", ""),
             "enabled": job.get("enabled", True),
             "cron_description": _cron_description(job.get("cron_expression", "")),
+            "warnings": _job_warnings(config),
         })
     return jobs
 
@@ -140,8 +197,8 @@ def create_job(payload: dict = Body(...)) -> dict:
         config[type_key] = _replace_type_markers(config[type_key])
         config["filemap"] = []
 
-    _write_config(name, config)
-    return {"filename": name, "config": config}
+    warnings = _write_config(name, config)
+    return {"filename": name, "config": config, "warnings": warnings}
 
 
 @app.post("/api/filemap/quick")
@@ -173,8 +230,8 @@ def get_job(name: str) -> dict:
 @app.put("/api/jobs/{name}")
 def put_job(name: str, payload: dict = Body(...)) -> dict:
     name = _job_name(name)
-    _write_config(name, payload)
-    return {"filename": name, "config": payload}
+    warnings = _write_config(name, payload)
+    return {"filename": name, "config": payload, "warnings": warnings}
 
 
 @app.put("/api/jobs/{name}/enabled")
@@ -203,18 +260,17 @@ def validate_job(name: str) -> dict:
     if not store.exists(name):
         raise HTTPException(status_code=404, detail=f"{name} not found")
 
+    warnings = _job_warnings(_read_config(name))
     buf = io.StringIO()
     try:
         with redirect_stdout(buf):
             config = ConfigJSON(name)
             remote = build_remote(config)
             remote.validate()
-    except FileNotFoundError:
-        raise HTTPException(status_code=400, detail="email.json must exist before validating a job")
     except Exception as e:
-        return {"output": buf.getvalue(), "error": str(e)}
+        return {"output": buf.getvalue(), "error": str(e), "warnings": warnings}
 
-    return {"output": buf.getvalue()}
+    return {"output": buf.getvalue(), "warnings": warnings}
 
 
 @app.post("/api/jobs/{name}/run")
@@ -223,11 +279,13 @@ def run_job(name: str) -> dict:
     config = _read_config(name)
     job = config.get("job", {})
     job_runner = job.get("job_runner")
-    if not job_runner:
-        raise HTTPException(status_code=400, detail="job has no job_runner set")
+    check_runner(job.get("job_type"), job_runner)
 
-    extra_args = job.get("extra_args", "")
-    command = [radautopy_executable(), name, job_runner, *shlex.split(extra_args)]
+    try:
+        extra_args = shlex.split(job.get("extra_args") or "")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=f"extra_args is invalid: {e}")
+    command = [radautopy_executable(), name, job_runner, *extra_args]
     make_dirs(LOG_DIR)
     with open(RADAUTOPY_LOG, "a") as log_file:
         log_file.write(f"\n--- web-triggered run {datetime.now(timezone.utc).isoformat()}: {' '.join(command)} ---\n")
@@ -247,6 +305,8 @@ def get_email() -> dict:
 
 @app.put("/api/email")
 def put_email(payload: dict = Body(...)) -> dict:
+    if not isinstance(payload.get("email"), dict):
+        raise HTTPException(status_code=400, detail="email config must have an 'email' section")
     _write_config("email.json", payload)
     return {"config": payload}
 
@@ -305,6 +365,7 @@ def _job_form_context(config: dict) -> dict:
         "config": config,
         "config_json": json.dumps(config),
         "job_runners": JOB_RUNNERS,
+        "email_modes": EMAIL_MODES,
         "job_types": list(JOB_TYPE_SKELETONS),
         "current_job_type": job_type,
         "type_key_map": type_key_map,
@@ -333,7 +394,7 @@ def edit_job_page(request: Request, name: str):
     name = _job_name(name)
     config = _read_config(name)
     context = _job_form_context(config)
-    context.update({"filename": name, "is_new": False})
+    context.update({"filename": name, "is_new": False, "warnings": _job_warnings(config)})
     return templates.TemplateResponse(request, "job_config.html", context)
 
 

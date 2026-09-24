@@ -20,8 +20,7 @@ logger = logging.getLogger(LOGGER_NAME)
 class Attachment:
     def __init__(self, filename: pathlib.Path, subtype: str) -> None:
         if not filename.exists():
-            logger.exception(FileNotFoundError(f"FileNotFound: {str(filename)}"))
-            raise FileNotFoundError
+            raise FileNotFoundError(f"attachment not found: {filename}")
         else:
             self.filename = filename
             self.mime_type = self.get_mime(subtype)
@@ -35,8 +34,7 @@ class Attachment:
             logger.debug(f"Using MIMEApplication")
             return MIMEApplication
         else:
-            logger.exception(NotImplementedError(f"NotImplemented - Attempted mime_type {mime_type}"))
-            raise NotImplementedError
+            raise NotImplementedError(f"unsupported attachment type: {mime_type}")
 
 
 @dataclass
@@ -99,9 +97,10 @@ class RadMail:
         msg.attach(message_text)
 
         for f in self.attachments:
-            attachment = open(f.filename, 'rb')
+            with open(f.filename, 'rb') as attachment:
+                data = attachment.read()
             filename = f.filename.name
-            part = f.mime_type(attachment.read(), _subtype=f.subtype)
+            part = f.mime_type(data, _subtype=f.subtype)
             part.add_header('Content-Disposition', 'attachment', filename=filename)
             msg.attach(part)
 

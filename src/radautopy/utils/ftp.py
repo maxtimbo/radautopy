@@ -2,9 +2,10 @@ import click
 import logging
 import pathlib
 
-from ftplib import FTP, error_perm
+from ftplib import FTP, all_errors, error_perm
 
 from . import LOGGER_NAME
+from .errors import RemoteError
 from .redact import MASK
 
 logger = logging.getLogger(LOGGER_NAME)
@@ -20,12 +21,17 @@ class RadFTP:
 
     def do_action(self, function, pasv: bool = True, *args, **kwargs):
         self.pasv = pasv
-        with FTP(self.server) as self.ftp:
-            self.ftp.login(user = self.username, passwd = self.password)
-            self.ftp.set_pasv(self.pasv)
-            if self.directory is not None:
-                self.ftp.cwd(self.directory)
-            return function(*args, **kwargs)
+        try:
+            with FTP(self.server, timeout=60) as self.ftp:
+                self.ftp.login(user = self.username, passwd = self.password)
+                self.ftp.set_pasv(self.pasv)
+                if self.directory:
+                    self.ftp.cwd(self.directory)
+                return function(*args, **kwargs)
+        except RemoteError:
+            raise
+        except all_errors as e:
+            raise RemoteError(f'FTP {self.server}: {e}') from e
 
     def list_remote(self, filename: str | None = None) -> list[str]:
         files = [] if filename is not None else ""
@@ -49,9 +55,13 @@ class RadFTP:
         return files
 
     def download_file(self, remote_file: str, local_file: pathlib.Path | str) -> None:
-        self.ftp.nlst(remote_file)
-        with open(local_file, 'wb') as f:
-            self.ftp.retrbinary('RETR ' + remote_file, f.write, 1024)
+        try:
+            self.ftp.nlst(remote_file)
+            with open(local_file, 'wb') as f:
+                self.ftp.retrbinary('RETR ' + remote_file, f.write, 1024)
+        except all_errors as e:
+            pathlib.Path(local_file).unlink(missing_ok=True)
+            raise RemoteError(f'FTP {self.server}: download {remote_file} failed: {e}') from e
 
         logger.info(f"Downloaded {remote_file} as {local_file}")
 
@@ -71,6 +81,6 @@ class RadFTP:
             for f in files:
                 click.echo(f)
             click.echo('~~ FTP Connection success! ~~')
-        except:
-            click.echo('~~ FTP Connection Failed! ~~')
+        except Exception as e:
+            click.echo(f'~~ FTP Connection Failed! ~~\n{e}')
 

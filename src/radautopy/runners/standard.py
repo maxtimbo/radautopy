@@ -10,39 +10,31 @@ logger = logging.getLogger(LOGGER_NAME)
 def perform_standard(
         config: ConfigJSON,
         mailer: RadMail,
-        email_bool: bool,
+        email_mode: str,
         remote
-    ) -> None:
+    ) -> bool:
 
     config.concat_directories_filemap()
-    downloads = [(x['input_file'].name, x['input_file']) for x in config.filemap]
-    logger.info(f'{downloads = }')
-    try:
-        logger.debug('try started')
-        remote.download_files(downloads)
-        for i, o in downloads:
-            logger.info(f'downloaded: {i}')
-            mailer.append_table_data('downloaded', i)
-        logger.debug('try complete')
-    except:
-        logger.error('downloads unsuccessful')
-        mailer.p('Download unsuccessful')
-    else:
-        logger.debug('else clause started')
-        for track in config.filemap:
+    failed = 0
+    for track in config.filemap:
+        name = track['input_file'].name
+        mailer.append_table_data('file', name)
+        try:
+            remote.download_files([(name, track['input_file'])])
             audio = AudioFile(track['input_file'], track['output_file'])
-            logger.debug(f'audio object created {track["input_file"]} -> {track["output_file"]}')
             audio.apply_metadata(artist=track['artist'], title=track['title'])
-            logger.debug(f'applied metadata {track["artist"]} {track["title"]}')
-            try:
-                audio.move()
-                logger.debug('audio moved')
-                mailer.append_table_data('moved to', track['output_file'])
-            except:
-                logger.error('move fail')
-                mailer.p('move unsuccessful')
-    finally:
-        logger.debug('finally clause')
-        mailer.concat_table()
-        if email_bool: mailer.send_mail()
+            audio.move()
+        except Exception as e:
+            failed += 1
+            logger.exception(f'{name} failed: {e}')
+            mailer.append_table_data('result', f'failed: {e}')
+        else:
+            logger.info(f'{name} delivered to {track["output_file"]}')
+            mailer.append_table_data('result', f'delivered to {track["output_file"]}')
 
+    total = len(config.filemap)
+    if failed:
+        mailer.p(f'{failed} of {total} file(s) failed')
+    else:
+        mailer.p(f'All {total} file(s) delivered')
+    return failed == 0

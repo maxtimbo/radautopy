@@ -5,10 +5,20 @@ from .utils.config.config_modify import ConfigModify
 from .utils.config.config_modify import set_cronjob as preform_set_cronjob
 from .utils.config.config import ConfigJSON
 
+from .utils.errors import RadautopyError
 from .utils.mail import RadMail
 from .utils.remote import build_remote
 
-@click.group()
+
+class RadGroup(click.Group):
+    def invoke(self, ctx):
+        try:
+            return super().invoke(ctx)
+        except RadautopyError as e:
+            raise click.ClickException(str(e)) from e
+
+
+@click.group(cls=RadGroup)
 def create_modify():
     """
     Create, modify, or validate config files for radautopy
