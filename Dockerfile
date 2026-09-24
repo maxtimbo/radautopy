@@ -8,6 +8,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 # Debian's rclone is too old for `rclone gui`; keep app and GUI on the same version
 COPY --from=rclone /usr/local/bin/rclone /usr/local/bin/rclone
+# Drop the UTC symlink so a mounted host /etc/localtime is read as a real file
+RUN rm -f /etc/localtime
 
 RUN groupadd --gid 1000 radautopy \
     && useradd --uid 1000 --gid radautopy --create-home --shell /usr/sbin/nologin radautopy

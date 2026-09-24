@@ -35,6 +35,7 @@ JOB_METADATA = {
         "cron_expression": str,
         "job_runner": str,
         "extra_args": "",
+        "enabled": True,
     }
 }
 

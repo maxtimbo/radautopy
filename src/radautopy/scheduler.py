@@ -2,9 +2,9 @@ import shlex
 import subprocess
 
 from apscheduler.schedulers.blocking import BlockingScheduler
-from apscheduler.triggers.cron import CronTrigger
 
 from .utils.config import LOG_DIR, store
+from .utils.cron import trigger_from_crontab
 from .utils.log_setup import RadLogger
 from .utils.utilities import radautopy_executable
 
@@ -18,7 +18,7 @@ def _load_jobs() -> dict[str, dict]:
     jobs = {}
     for filename, config in store.list_jobs().items():
         job = config.get("job")
-        if not job or not job.get("cron_expression"):
+        if not job or not job.get("cron_expression") or not job.get("enabled", True):
             continue
 
         jobs[filename] = job
@@ -52,7 +52,7 @@ class JobSync:
             if self.known.get(config_name) == job:
                 continue
             try:
-                trigger = CronTrigger.from_crontab(job["cron_expression"])
+                trigger = trigger_from_crontab(job["cron_expression"])
             except ValueError:
                 logger.exception(f"invalid cron_expression for {config_name}")
                 continue

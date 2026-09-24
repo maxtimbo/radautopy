@@ -48,7 +48,7 @@ Docker and Docker Compose.
 
     With this mount, a job would use `"export_dir": "/export"`.
 
-5. Copy `.env.sample` to `.env` and set `RCLONE_GUI_PASS` (and optionally `RCLONE_GUI_USER`, which defaults to `admin`). Compose refuses to start until the password is set.
+5. Copy `.env.sample` to `.env` and set `RCLONE_GUI_PASS` (and optionally `RCLONE_GUI_USER`, which defaults to `admin`). Compose refuses to start until the password is set. See [Timezone](#timezone) for the optional `TZ` setting.
 
 6. Build and start:
 
@@ -66,10 +66,33 @@ Docker and Docker Compose.
 | 5522 | rclone web GUI |
 | 5533 | rclone API (the GUI calls it directly from the browser) |
 
-All three must be reachable from your browser. If you change the host side of the rclone ports (for example `"9000:5522"`), also set `RCLONE_GUI_PORT` and `RCLONE_API_PORT` under the `web` service's `environment` so the **rclone Remotes** link points to the right place.
+All three must be reachable from your browser. If you change the host side of the rclone ports (for example `"9000:5522"`), also set `RCLONE_GUI_PORT` and `RCLONE_API_PORT` under the `web` service's `environment` so the **rclone Remotes** page points to the right place.
 
 > [!WARNING]
-> The web UI has no login, and all passwords are stored in plain text. The **rclone Remotes** link logs straight into the rclone GUI, which can read everything under `/data`. Only expose these ports on a trusted network.
+> The web UI has no login, and all passwords are stored in plain text. The **rclone Remotes** page logs straight into the rclone GUI, which can read everything under `/data`. Only expose these ports on a trusted network.
+
+#### Timezone
+
+All containers use the host's timezone by default (the compose file mounts the host's `/etc/localtime`). To use a different timezone, set `TZ` in `.env`:
+
+```
+TZ=America/New_York
+```
+
+Cron expressions, next run times and log timestamps all use this timezone.
+
+#### Scheduling Jobs
+
+Each job's **Cron Expression** uses standard crontab syntax (`minute hour day month weekday`). The job form includes a helper that shows a plain-English description, the next five run times and common presets as you type, plus a field reference. The job list shows the same description under each expression.
+
+- Day of week follows crontab: `0` and `7` are Sunday, `1-5` is Monday through Friday. Names such as `mon-fri` also work.
+- Leave the expression blank to only run the job manually.
+- Untick **Enabled** (on the job list or the job form) to pause scheduled runs without deleting the job. A disabled job can still be run with the **Run** button.
+- The scheduler checks for changes every 60 seconds, so there is no need to restart it after editing a job.
+
+#### rclone Remotes
+
+The **rclone Remotes** page embeds the rclone web GUI, already logged in. Use it to create the remotes that `cloud` jobs download from; the remote's name goes in the job's `server` field. The page also has a link to open the GUI in its own tab.
 
 #### Updating
 
@@ -113,7 +136,7 @@ Using `radauto-config create MyCoolShow.json [job type, see below]` will create 
 
 Once created, use `radauto-config list-configs` to list saved configs. Use `radauto-config modify [job_name.json]` to alter an existing config (leave out the job name to modify the global email config), and `radauto-config validate [job_name.json]` to validate a job (again, leave out the job name to validate the email config).
 
-Jobs run on the schedule set in their `cron_expression`. The scheduler container picks up changes automatically, so `radauto-config set-cronjob` is not needed under Docker.
+Jobs run on the schedule set in their `cron_expression`. Set `"enabled": false` in the job metadata (or untick Enabled in the web UI) to stop scheduled runs without deleting the job; a disabled job can still be run manually. Jobs without an `enabled` key are treated as enabled. The scheduler container picks up changes automatically, so `radauto-config set-cronjob` is not needed under Docker.
 
 You can add or remove any `"email": {}` entries in a job, as these override the global email settings.
 
@@ -207,7 +230,8 @@ You can test a job with `radautopy [job_name.json] [job_runner] {optional_extra_
     "job_type": str,
     "cron_expression": str,
     "job_runner": str,
-    "extra_args": ""
+    "extra_args": "",
+    "enabled": boolean
   }
 }
 ```
@@ -241,7 +265,7 @@ You can test a job with `radautopy [job_name.json] [job_runner] {optional_extra_
 
 #### Example rclone Config
 
-`server` is the name of a remote in rclone's config. Remotes are managed in the bundled [rclone web GUI](https://github.com/rclone/rclone-web), opened with the **rclone Remotes** link in the web UI. The job type for rclone is `cloud`.
+`server` is the name of a remote in rclone's config. Remotes are managed in the bundled [rclone web GUI](https://github.com/rclone/rclone-web), opened from the **rclone Remotes** page in the web UI. The job type for rclone is `cloud`.
 
 ```
 {

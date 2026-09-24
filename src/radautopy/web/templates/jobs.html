@@ -4,15 +4,16 @@
 <h1>Jobs</h1>
 <table>
   <thead>
-    <tr><th>Name</th><th>Type</th><th>Runner</th><th>Cron</th><th>Actions</th></tr>
+    <tr><th>Enabled</th><th>Name</th><th>Type</th><th>Runner</th><th>Cron</th><th>Actions</th></tr>
   </thead>
   <tbody>
     {% for job in jobs %}
-    <tr id="row-{{ job.filename }}">
+    <tr id="row-{{ job.filename }}" {% if not job.enabled %}class="job-disabled"{% endif %}>
+      <td><input type="checkbox" {% if job.enabled %}checked{% endif %} onchange="setEnabled('{{ job.filename }}', this)" title="Scheduled runs enabled"></td>
       <td><a href="/jobs/{{ job.filename }}/edit">{{ job.job_name or job.filename }}</a></td>
       <td>{{ job.job_type }}</td>
       <td>{{ job.job_runner }}</td>
-      <td>{{ job.cron_expression }}</td>
+      <td>{{ job.cron_expression }}<br><small>{{ job.cron_description }}</small></td>
       <td class="row-actions">
         <button onclick="runJob('{{ job.filename }}')">Run</button>
         <button onclick="validateJob('{{ job.filename }}')">Validate</button>
@@ -31,6 +32,25 @@ function runJob(name) {
     .then(r => r.json())
     .then(data => showStatus(document.getElementById('job-status'), true, `Started ${name} (pid ${data.pid})`))
     .catch(e => showStatus(document.getElementById('job-status'), false, e));
+}
+
+function setEnabled(name, checkbox) {
+  const status = document.getElementById('job-status');
+  fetch(`/api/jobs/${name}/enabled`, {
+    method: 'PUT',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({enabled: checkbox.checked}),
+  })
+    .then(async r => {
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.detail || 'update failed');
+      document.getElementById(`row-${name}`).classList.toggle('job-disabled', !data.enabled);
+      showStatus(status, true, `${name} ${data.enabled ? 'enabled' : 'disabled'}`);
+    })
+    .catch(e => {
+      checkbox.checked = !checkbox.checked;
+      showStatus(status, false, e.message);
+    });
 }
 
 function validateJob(name) {
