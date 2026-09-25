@@ -81,6 +81,62 @@ The web UI requires a login. The built-in `admin` user's password is `RADAUTOPY_
 
 Sessions last 7 days, and changing a local user's role or password logs them out. An LDAP user's role is checked at login, so a group change takes effect the next time they log in. Behind a reverse proxy, set `FORWARDED_ALLOW_IPS` on the `web` service to the proxy's address so the session cookie gets the `Secure` flag on HTTPS.
 
+#### LDAP Settings
+
+| Field | What it is |
+| --- | --- |
+| Enable LDAP login | Turns LDAP logins on. `admin` and local users work either way. |
+| Server URL | `ldaps://host:port` for an encrypted connection, or `ldap://host:port` with **Use StartTLS** checked. Use the host name on the server's certificate, not an IP address. |
+| Use StartTLS | Upgrades an `ldap://` connection to TLS. Leave unchecked for `ldaps://`. |
+| CA certificate file | Path, inside the container, to the certificate of the authority that signed the LDAP server's certificate. Needed when the directory uses its own certificate authority, which is common. Put the file in the data volume (for example `/data/ldap-ca.pem`). |
+| Bind DN / Bind password | The service account radautopy uses to look users up. It only needs read access. The password is never sent back to the browser; leave the field as is to keep the saved one. |
+| User search base | Where to look for users. The search covers everything below it. Use the container your users live in, or the directory's base DN if users are spread across several containers. |
+| User filter | How to find a user by login name. `{username}` is replaced with what the user typed (escaped). It must match exactly one entry. |
+| Admin group DN / Viewer group DN | Full DNs of the groups that map to each role. Group membership is read from the user's `memberOf` attribute when the server provides it, otherwise from the group's `member`, `uniqueMember` or `memberUid` values. |
+| Timeout | Seconds to wait for the server before giving up. |
+
+##### Setting Up
+
+1. In your directory, create a service account for radautopy with read access. Most directories don't allow anonymous searches, so this is usually required.
+2. Create two groups, for example `radautopy-admins` and `radautopy-viewers`, and add users to them.
+3. If the directory's certificate is signed by its own certificate authority, copy that authority's certificate into the data volume (for example to `ldap-ca.pem` in the folder mounted at `/data`) and enter `/data/ldap-ca.pem` as the CA certificate file.
+4. Fill in the form, then use **Test LDAP login** (see [Troubleshooting](#troubleshooting)) with a user from each group before saving.
+
+##### Example
+
+A typical OpenLDAP-style directory with base DN `dc=example,dc=com`:
+
+| Field | Value |
+| --- | --- |
+| Server URL | `ldaps://ldap.example.com:636` |
+| Use StartTLS | unchecked |
+| CA certificate file | `/data/ldap-ca.pem` |
+| Bind DN | `uid=radautopy,ou=services,dc=example,dc=com` |
+| User search base | `ou=people,dc=example,dc=com` |
+| User filter | `(uid={username})` |
+| Admin group DN | `cn=radautopy-admins,ou=groups,dc=example,dc=com` |
+| Viewer group DN | `cn=radautopy-viewers,ou=groups,dc=example,dc=com` |
+
+Container names such as `ou=people` or `cn=users` and the port numbers vary between directory servers, so check your server's documentation. If users are spread across several containers, use the base DN itself (`dc=example,dc=com`) as the user search base. To see where a user lives, search for them with a tool such as `ldapsearch` and look at their DN.
+
+##### Active Directory
+
+Use `ldaps://dc.example.com:636` (or `ldap://...:389` with StartTLS), a service account's full DN or `user@example.com` as the bind DN, `cn=Users,dc=example,dc=com` or the domain root as the user search base, and `(sAMAccountName={username})` as the user filter. AD provides `memberOf`, so direct group membership works without extra setup. Nested groups are not followed.
+
+##### Troubleshooting
+
+Open **Test LDAP login** on the Settings page and try a user from each group. It reports each step, so the last line shows where it stopped:
+
+| Stops at | Likely cause |
+| --- | --- |
+| connecting | Wrong host or port, the container can't resolve the host name (`docker compose exec web getent hosts <host>`; add `extra_hosts:` or `dns:` to the `web` service if needed), a firewall, or a certificate problem: the CA file is missing or wrong, or the URL uses a name that isn't on the certificate. |
+| service bind | Wrong bind DN or password. |
+| found user | The filter matched 0 entries (wrong search base, or the user is outside it) or more than 1 (the filter isn't specific enough). |
+| user bind | Wrong password, or the account is disabled or locked. |
+| group | The user isn't in either group, or a group DN has a typo. Copy DNs from the directory rather than typing them. |
+
+The test uses what's currently in the form, including unsaved changes, so you can adjust and retest before saving.
+
 #### Timezone
 
 All containers use the host's timezone by default (the compose file mounts the host's `/etc/localtime`). To use a different timezone, set `TZ` in `.env`:
