@@ -1,10 +1,12 @@
+import os
 import sys
+from datetime import datetime, timezone
 
 import click
 from pathlib import Path
 from importlib.metadata import version
 
-from .utils.config import EMAIL_MODES, LOG_DIR
+from .utils.config import EMAIL_MODES, LOG_DIR, store
 from .utils.config.config import ConfigJSON
 from .utils.errors import ConfigError
 
@@ -44,8 +46,17 @@ def finish(mailer: RadMail | None, email_mode: str, ok: bool) -> None:
     mailer.send_mail(alt_subject=None if ok else f"FAILED: {mailer.subject}")
 
 
+def record_run(ctx: click.Context, ok: bool, message: str = "") -> None:
+    try:
+        trigger = os.environ.get("RADAUTOPY_TRIGGER", "cli")
+        store.record_run(ctx.obj["config_file"], ctx.obj["started_at"], ok, trigger, message)
+    except Exception:
+        logger.exception("could not record run result")
+
+
 def fail(ctx: click.Context, message: str) -> None:
     logger.exception(message)
+    record_run(ctx, ok=False, message=message)
     click.echo(f"error: {message}", err=True)
     mailer = ctx.obj.get("mailer")
     if mailer is not None:
@@ -65,6 +76,7 @@ def run_guarded(ctx: click.Context, runner_name: str, runner, *args) -> None:
         fail(ctx, f"{obj['config_file']} failed during {runner_name}: {e}")
         return
     finish(obj["mailer"], obj["email_mode"], ok)
+    record_run(ctx, ok, "" if ok else "finished with errors; see radautopy.log")
     if not ok:
         logger.error(f"{obj['config_file']} finished with errors")
         click.echo(f"error: {obj['config_file']} finished with errors; see radautopy.log", err=True)
@@ -85,6 +97,7 @@ def cli(ctx: click.Context, config_file: str, verbose: bool, disable_email: bool
 
     ctx.ensure_object(dict)
     ctx.obj['config_file'] = config_file
+    ctx.obj['started_at'] = datetime.now(timezone.utc)
     try:
         config = ConfigJSON(config_file)
         ctx.obj['config'] = config

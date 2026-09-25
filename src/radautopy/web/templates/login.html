@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Log in - radautopy{% endblock %}
+{% block content %}
+<form class="field-form login-form" method="post" action="/login">
+  <h1>radautopy</h1>
+  <input type="hidden" name="next" value="{{ next }}">
+  <label for="username">Username</label>
+  <input type="text" id="username" name="username" autocomplete="username" autofocus required>
+  <label for="password">Password</label>
+  <input type="password" id="password" name="password" autocomplete="current-password" required>
+  {% if error %}<div class="status error">{{ error }}</div>{% endif %}
+  <button type="submit">Log in</button>
+</form>
+{% endblock %}

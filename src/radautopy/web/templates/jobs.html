@@ -1,23 +1,34 @@
 {% extends "base.html" %}
 {% block title %}Jobs - radautopy{% endblock %}
 {% block content %}
+{% set is_admin = request.state.user.role == 'admin' %}
 <h1>Jobs</h1>
 <table>
   <thead>
-    <tr><th>Enabled</th><th>Name</th><th>Type</th><th>Runner</th><th>Cron</th><th>Actions</th></tr>
+    <tr><th>Enabled</th><th>Name</th><th>Type</th><th>Runner</th><th>Cron</th><th>Last Run</th><th>Actions</th></tr>
   </thead>
   <tbody>
     {% for job in jobs %}
     <tr id="row-{{ job.filename }}" {% if not job.enabled %}class="job-disabled"{% endif %}>
-      <td><input type="checkbox" {% if job.enabled %}checked{% endif %} onchange="setEnabled('{{ job.filename }}', this)" title="Scheduled runs enabled"></td>
+      <td><input type="checkbox" {% if job.enabled %}checked{% endif %} onchange="setEnabled('{{ job.filename }}', this)" title="Scheduled runs enabled"{% if not is_admin %} disabled{% endif %}></td>
       <td><a href="/jobs/{{ job.filename }}/edit">{{ job.job_name or job.filename }}</a>{% if job.warnings %}<br><small class="needs-attention" title="{{ job.warnings | join('; ') }}">needs attention: {{ job.warnings[0] }}</small>{% endif %}</td>
       <td>{{ job.job_type }}</td>
       <td>{{ job.job_runner }}</td>
       <td>{{ job.cron_expression }}<br><small>{{ job.cron_description }}</small></td>
+      <td>
+        {% if job.last_run %}
+        <span class="run-status {{ 'ok' if job.last_run.ok else 'error' }}"{% if job.last_run.message %} title="{{ job.last_run.message }}"{% endif %}>{{ 'Success' if job.last_run.ok else 'Failed' }}</span><br>
+        <small>{{ job.last_run.finished_display }} ({{ job.last_run.trigger }}, {{ job.last_run.duration_seconds }}s)</small>
+        {% else %}
+        <small>never</small>
+        {% endif %}
+      </td>
       <td class="row-actions">
+        {% if is_admin %}
         <button onclick="runJob('{{ job.filename }}')">Run</button>
         <button onclick="validateJob('{{ job.filename }}')">Validate</button>
         <button onclick="deleteJob('{{ job.filename }}')">Delete</button>
+        {% endif %}
       </td>
     </tr>
     {% endfor %}

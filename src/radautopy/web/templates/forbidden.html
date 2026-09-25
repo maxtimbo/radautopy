@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block title %}Not allowed - radautopy{% endblock %}
+{% block content %}
+<h1>Not allowed</h1>
+<p>This page requires the admin role. Your account ({{ request.state.user.username }}) has the {{ request.state.user.role }} role.</p>
+<p><a href="/">Back to Jobs</a></p>
+{% endblock %}
