@@ -4,14 +4,16 @@ import logging
 import os
 import shlex
 import subprocess
+import sys
+import time
 from contextlib import redirect_stdout
 from copy import deepcopy
 from datetime import datetime, timezone
 from pathlib import Path
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlparse
 
 import uvicorn
-from fastapi import Body, FastAPI, HTTPException
+from fastapi import Body, FastAPI, Form, HTTPException
 from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -25,6 +27,7 @@ from ..utils.config import (
     JOB_RUNNERS,
     EMAIL_MODES,
     build_dict,
+    auth_store,
     store,
 )
 from ..utils.config.config import ConfigJSON
@@ -33,17 +36,75 @@ from ..utils.config.replace_fillers import ReplaceFillers
 from ..utils.cron import describe, next_runs, trigger_from_crontab
 from ..utils.errors import ConfigError, RadautopyError
 from ..utils.mail import RadMail, normalize_recipients
+from ..utils.redact import MASK, redact
 from ..utils.remote import build_remote, check_runner
 from ..utils.utilities import check_writable, make_dirs, radautopy_executable
+from . import auth
 
 RADAUTOPY_LOG = LOG_DIR / "radautopy.log"
 KNOWN_LOGS = ["radautopy.log", "radautopy-scheduler.log"]
+SESSION_COOKIE = "radautopy_session"
+PUBLIC_PATHS = {"/login"}
+ADMIN_GET_PREFIXES = ("/jobs/new", "/email", "/api/email", "/settings", "/api/auth", "/rclone")
+VIEWER_PATHS = {"/api/auth/me", "/logout"}
+UNSAFE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 
 logger = logging.getLogger("uvicorn.error")
 
 app = FastAPI(title="radautopy control layer")
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 app.mount("/static", StaticFiles(directory=str(Path(__file__).parent / "static")), name="static")
+
+
+def _resolve_user(request: Request) -> tuple[dict | None, bool]:
+    header = request.headers.get("authorization", "")
+    if header.lower().startswith("bearer "):
+        token = auth_store.get_token(header[7:].strip())
+        if token is None:
+            return None, True
+        return {"username": f"token:{token['name']}", "role": token["role"], "source": "token"}, True
+    cookie = request.cookies.get(SESSION_COOKIE)
+    return (auth_store.get_session(cookie) if cookie else None), False
+
+
+def _same_origin(request: Request) -> bool:
+    source = request.headers.get("origin") or request.headers.get("referer")
+    return bool(source) and urlparse(source).netloc == request.headers.get("host")
+
+
+def _is_admin_only(request: Request) -> bool:
+    path = request.url.path
+    if path in VIEWER_PATHS:
+        return False
+    return request.method in UNSAFE_METHODS or path.startswith(ADMIN_GET_PREFIXES)
+
+
+@app.middleware("http")
+async def require_auth(request: Request, call_next):
+    path = request.url.path
+    request.state.user = None
+    if path in PUBLIC_PATHS or path.startswith("/static/"):
+        return await call_next(request)
+
+    user, bearer = _resolve_user(request)
+    if user is None:
+        if path.startswith("/api/"):
+            return JSONResponse(status_code=401, content={"detail": "not authenticated"})
+        next_path = path + (f"?{request.url.query}" if request.url.query else "")
+        return RedirectResponse(f"/login?{urlencode({'next': next_path})}", status_code=303)
+    if not bearer and request.method in UNSAFE_METHODS and not _same_origin(request):
+        return JSONResponse(status_code=403, content={"detail": "cross-origin request rejected"})
+    request.state.user = user
+    if _is_admin_only(request) and user["role"] != "admin":
+        if path.startswith("/api/") or request.method != "GET":
+            return JSONResponse(status_code=403, content={"detail": "admin role required"})
+        return templates.TemplateResponse(request, "forbidden.html", {}, status_code=403)
+
+    return await call_next(request)
+
+
+def _is_viewer(request: Request) -> bool:
+    return request.state.user["role"] != "admin"
 
 
 @app.exception_handler(RadautopyError)
@@ -142,6 +203,7 @@ def _list_job_names() -> list[str]:
 @app.get("/api/jobs")
 def list_jobs() -> list[dict]:
     jobs = []
+    runs = store.last_runs()
     for name in _list_job_names():
         try:
             config = store.get(name)
@@ -158,8 +220,21 @@ def list_jobs() -> list[dict]:
             "enabled": job.get("enabled", True),
             "cron_description": _cron_description(job.get("cron_expression", "")),
             "warnings": _job_warnings(config),
+            "last_run": _format_run(runs.get(name)),
         })
     return jobs
+
+
+def _format_run(run: dict | None) -> dict | None:
+    if run is None:
+        return None
+    started = datetime.fromisoformat(run["started_at"])
+    finished = datetime.fromisoformat(run["finished_at"])
+    return {
+        **run,
+        "finished_display": finished.astimezone().strftime("%Y-%m-%d %H:%M"),
+        "duration_seconds": round((finished - started).total_seconds()),
+    }
 
 
 def _cron_description(expression: str) -> str:
@@ -235,8 +310,9 @@ def quick_filemap(payload: dict = Body(...)) -> dict:
 
 
 @app.get("/api/jobs/{name}")
-def get_job(name: str) -> dict:
-    return _read_config(_job_name(name))
+def get_job(request: Request, name: str) -> dict:
+    config = _read_config(_job_name(name))
+    return redact(config) if _is_viewer(request) else config
 
 
 @app.put("/api/jobs/{name}")
@@ -302,7 +378,8 @@ def run_job(name: str) -> dict:
     with open(RADAUTOPY_LOG, "a") as log_file:
         log_file.write(f"\n--- web-triggered run {datetime.now(timezone.utc).isoformat()}: {' '.join(command)} ---\n")
         log_file.flush()
-        process = subprocess.Popen(command, stdout=log_file, stderr=subprocess.STDOUT)
+        env = {**os.environ, "RADAUTOPY_TRIGGER": "manual"}
+        process = subprocess.Popen(command, stdout=log_file, stderr=subprocess.STDOUT, env=env)
     return {"status": "started", "pid": process.pid, "command": command}
 
 
@@ -397,7 +474,7 @@ def new_job_page(request: Request):
     }
     blank["job"]["job_type"] = list(JOB_TYPE_SKELETONS)[0]
     context = _job_form_context(blank)
-    context.update({"filename": "", "is_new": True})
+    context.update({"filename": "", "is_new": True, "read_only": False})
     return templates.TemplateResponse(request, "job_config.html", context)
 
 
@@ -405,8 +482,10 @@ def new_job_page(request: Request):
 def edit_job_page(request: Request, name: str):
     name = _job_name(name)
     config = _read_config(name)
-    context = _job_form_context(config)
-    context.update({"filename": name, "is_new": False, "warnings": _job_warnings(config)})
+    warnings = _job_warnings(config)
+    read_only = _is_viewer(request)
+    context = _job_form_context(redact(config) if read_only else config)
+    context.update({"filename": name, "is_new": False, "warnings": warnings, "read_only": read_only})
     return templates.TemplateResponse(request, "job_config.html", context)
 
 
@@ -438,7 +517,168 @@ def rclone_login(request: Request):
     return RedirectResponse(f"{request.url.scheme}://{host}:{gui_port}/login?{query}")
 
 
+def _safe_next(next_path: str) -> str:
+    return next_path if next_path.startswith("/") and not next_path.startswith(("//", "/\\")) else "/"
+
+
+@app.get("/login")
+def login_page(request: Request, next: str = "/"):
+    return templates.TemplateResponse(request, "login.html", {"next": _safe_next(next), "error": ""})
+
+
+@app.post("/login")
+def login(request: Request, username: str = Form(""), password: str = Form(""), next: str = Form("/")):
+    ip = request.client.host if request.client else ""
+    time.sleep(auth.failure_delay(ip, username))
+    result = auth.authenticate(username, password)
+    auth.record_attempt(ip, username, result is not None)
+    if result is None:
+        logger.warning(f"login failed for {username!r} from {ip}")
+        return templates.TemplateResponse(
+            request, "login.html", {"next": _safe_next(next), "error": "Invalid username or password"}, status_code=401,
+        )
+    role, source = result
+    logger.info(f"login ok for {username!r} ({source}, {role}) from {ip}")
+    token = auth_store.create_session(username, role, source)
+    response = RedirectResponse(_safe_next(next), status_code=303)
+    response.set_cookie(
+        SESSION_COOKIE, token, max_age=auth_store.SESSION_DAYS * 86400, httponly=True, samesite="lax",
+        secure=request.url.scheme == "https",
+    )
+    return response
+
+
+@app.post("/logout")
+def logout(request: Request):
+    cookie = request.cookies.get(SESSION_COOKIE)
+    if cookie:
+        auth_store.delete_session(cookie)
+    response = RedirectResponse("/login", status_code=303)
+    response.delete_cookie(SESSION_COOKIE)
+    return response
+
+
+@app.get("/api/auth/me")
+def auth_me(request: Request) -> dict:
+    return request.state.user
+
+
+@app.get("/api/auth/users")
+def auth_list_users() -> list[dict]:
+    return auth_store.list_users()
+
+
+def _check_username(username: str) -> str:
+    username = (username or "").strip()
+    if not username:
+        raise HTTPException(status_code=400, detail="username is required")
+    if username == auth.ADMIN_USERNAME:
+        raise HTTPException(status_code=400, detail="admin is managed by RADAUTOPY_ADMIN_PASSWORD")
+    return username
+
+
+@app.post("/api/auth/users")
+def auth_create_user(payload: dict = Body(...)) -> dict:
+    username = _check_username(payload.get("username"))
+    if not payload.get("password"):
+        raise HTTPException(status_code=400, detail="password is required")
+    try:
+        created = auth_store.create_user(username, payload["password"], payload.get("role", "viewer"))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    if not created:
+        raise HTTPException(status_code=409, detail=f"{username} already exists")
+    return {"username": username, "created": True}
+
+
+@app.put("/api/auth/users/{username}")
+def auth_update_user(username: str, payload: dict = Body(...)) -> dict:
+    username = _check_username(username)
+    try:
+        updated = auth_store.update_user(username, payload.get("password") or None, payload.get("role") or None)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    if not updated:
+        raise HTTPException(status_code=404, detail=f"{username} not found")
+    return {"username": username, "updated": True}
+
+
+@app.delete("/api/auth/users/{username}")
+def auth_delete_user(username: str) -> dict:
+    username = _check_username(username)
+    if not auth_store.delete_user(username):
+        raise HTTPException(status_code=404, detail=f"{username} not found")
+    return {"username": username, "deleted": True}
+
+
+@app.get("/api/auth/ldap")
+def auth_get_ldap() -> dict:
+    settings = auth.ldap_settings()
+    settings["bind_password"] = MASK if settings["bind_password"] else ""
+    return settings
+
+
+def _merge_ldap(payload: dict) -> dict:
+    settings = auth.ldap_settings()
+    for key in auth.LDAP_DEFAULTS:
+        if key in payload:
+            settings[key] = payload[key]
+    if payload.get("bind_password") in ("", MASK, None):
+        settings["bind_password"] = auth.ldap_settings()["bind_password"]
+    if settings["enabled"] and not (settings["url"] and settings["user_base"]):
+        raise HTTPException(status_code=400, detail="url and user_base are required when LDAP is enabled")
+    return settings
+
+
+@app.put("/api/auth/ldap")
+def auth_put_ldap(payload: dict = Body(...)) -> dict:
+    auth_store.save_setting("ldap", _merge_ldap(payload))
+    return auth_get_ldap()
+
+
+@app.post("/api/auth/ldap/test")
+def auth_test_ldap(payload: dict = Body(...)) -> dict:
+    settings = _merge_ldap(payload.get("settings") or {})
+    lines = []
+    try:
+        role = auth.ldap_authenticate(settings, payload.get("username", ""), payload.get("password", ""), lines.append)
+    except Exception as e:
+        return {"output": "\n".join(lines), "error": str(e)}
+    return {"output": "\n".join(lines), "role": role}
+
+
+@app.get("/api/auth/tokens")
+def auth_list_tokens() -> list[dict]:
+    return auth_store.list_tokens()
+
+
+@app.post("/api/auth/tokens")
+def auth_create_token(payload: dict = Body(...)) -> dict:
+    name = (payload.get("name") or "").strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="name is required")
+    try:
+        token_id, token = auth_store.create_token(name, payload.get("role", "viewer"))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return {"id": token_id, "name": name, "token": token}
+
+
+@app.delete("/api/auth/tokens/{token_id}")
+def auth_delete_token(token_id: int) -> dict:
+    if not auth_store.delete_token(token_id):
+        raise HTTPException(status_code=404, detail="token not found")
+    return {"id": token_id, "deleted": True}
+
+
+@app.get("/settings")
+def settings_page(request: Request):
+    return templates.TemplateResponse(request, "settings.html", {"roles": auth_store.ROLES})
+
+
 def main() -> None:
+    if not auth.admin_password():
+        sys.exit("RADAUTOPY_ADMIN_PASSWORD must be set before starting radautopy-web")
     host = os.environ.get("RADAUTOPY_WEB_HOST", "0.0.0.0")
     port = int(os.environ.get("RADAUTOPY_WEB_PORT", "8000"))
     uvicorn.run(app, host=host, port=port)

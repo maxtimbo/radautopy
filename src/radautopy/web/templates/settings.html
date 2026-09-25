@@ -1,0 +1,231 @@
+{% extends "base.html" %}
+{% block title %}Settings - radautopy{% endblock %}
+{% block content %}
+<h1>Settings</h1>
+
+<fieldset>
+  <legend>Local Users</legend>
+  <p><small>The built-in <code>admin</code> account uses <code>RADAUTOPY_ADMIN_PASSWORD</code> and always works, even when LDAP is unreachable. Local users take precedence over LDAP users with the same name.</small></p>
+  <table>
+    <thead><tr><th>Username</th><th>Role</th><th>Created</th><th>Actions</th></tr></thead>
+    <tbody id="users-body"></tbody>
+  </table>
+  <form class="field-form inline-form" id="user-form">
+    <label>Username <input id="new-username" required></label>
+    <label>Password <input type="password" id="new-password" autocomplete="new-password" required></label>
+    <label>Role
+      <select id="new-role">{% for r in roles %}<option value="{{ r }}">{{ r }}</option>{% endfor %}</select>
+    </label>
+    <button type="submit">Add User</button>
+  </form>
+  <div id="users-status" class="status"></div>
+</fieldset>
+
+<fieldset>
+  <legend>LDAP</legend>
+  <form class="field-form" id="ldap-form">
+    <label class="check-label"><input type="checkbox" id="ldap-enabled" data-key="enabled"> Enable LDAP login</label>
+    <label>Server URL <input data-key="url" placeholder="ldaps://ldap.example.com:636"></label>
+    <label class="check-label"><input type="checkbox" data-key="start_tls"> Use StartTLS (for ldap:// URLs)</label>
+    <label>CA certificate file (optional) <input data-key="ca_file" placeholder="/data/ldap-ca.pem"></label>
+    <label>Bind DN <input data-key="bind_dn" placeholder="cn=radautopy,ou=services,dc=example,dc=com"></label>
+    <label>Bind password <input type="password" data-key="bind_password" autocomplete="new-password" placeholder="leave blank to keep the saved password"></label>
+    <label>User search base <input data-key="user_base" placeholder="ou=people,dc=example,dc=com"></label>
+    <label>User filter <input data-key="user_filter" placeholder="(uid={username})"></label>
+    <small>Use <code>(sAMAccountName={username})</code> for Active Directory.</small>
+    <label>Admin group DN <input data-key="admin_group" placeholder="cn=radautopy-admins,ou=groups,dc=example,dc=com"></label>
+    <label>Viewer group DN <input data-key="viewer_group" placeholder="blank = any directory user can log in as viewer"></label>
+    <label>Timeout (seconds) <input type="number" data-key="timeout" min="1"></label>
+    <button type="submit">Save LDAP Settings</button>
+  </form>
+  <div id="ldap-status" class="status"></div>
+  <details>
+    <summary>Test LDAP login</summary>
+    <form class="field-form inline-form" id="ldap-test-form">
+      <label>Username <input id="ldap-test-username" required></label>
+      <label>Password <input type="password" id="ldap-test-password" autocomplete="off" required></label>
+      <button type="submit">Test</button>
+    </form>
+    <p><small>Tests the settings currently in the form, including unsaved changes.</small></p>
+    <pre id="ldap-test-output" class="output" style="display:none"></pre>
+  </details>
+</fieldset>
+
+<fieldset>
+  <legend>API Tokens</legend>
+  <p><small>Send as <code>Authorization: Bearer &lt;token&gt;</code>. A token is shown once, when it is created.</small></p>
+  <table>
+    <thead><tr><th>Name</th><th>Role</th><th>Created</th><th>Last used</th><th>Actions</th></tr></thead>
+    <tbody id="tokens-body"></tbody>
+  </table>
+  <form class="field-form inline-form" id="token-form">
+    <label>Name <input id="token-name" placeholder="rust-radio" required></label>
+    <label>Role
+      <select id="token-role">{% for r in roles %}<option value="{{ r }}">{{ r }}</option>{% endfor %}</select>
+    </label>
+    <button type="submit">Create Token</button>
+  </form>
+  <div id="tokens-status" class="status"></div>
+  <pre id="token-output" class="output" style="display:none"></pre>
+</fieldset>
+
+<script>
+const ROLES = {{ roles | tojson }};
+
+function cell(row, text) {
+  const td = document.createElement('td');
+  td.textContent = text || '';
+  row.appendChild(td);
+  return td;
+}
+
+function actionButton(td, label, handler) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.textContent = label;
+  button.onclick = handler;
+  td.appendChild(button);
+}
+
+function formatTime(iso) {
+  return iso ? new Date(iso).toLocaleString() : 'never';
+}
+
+function loadUsers() {
+  const status = document.getElementById('users-status');
+  apiFetch('/api/auth/users').then(users => {
+    const body = document.getElementById('users-body');
+    body.innerHTML = '';
+    users.forEach(user => {
+      const row = document.createElement('tr');
+      cell(row, user.username);
+      const roleCell = cell(row, '');
+      const select = document.createElement('select');
+      ROLES.forEach(r => select.add(new Option(r, r, false, r === user.role)));
+      select.onchange = () => apiFetch(`/api/auth/users/${encodeURIComponent(user.username)}`, {method: 'PUT', json: {role: select.value}})
+        .then(() => showStatus(status, true, `${user.username} is now ${select.value}`))
+        .catch(e => showStatus(status, false, e.message));
+      roleCell.appendChild(select);
+      cell(row, formatTime(user.created_at));
+      const actions = cell(row, '');
+      actions.className = 'row-actions';
+      actionButton(actions, 'Reset Password', () => {
+        const password = prompt(`New password for ${user.username}`);
+        if (!password) return;
+        apiFetch(`/api/auth/users/${encodeURIComponent(user.username)}`, {method: 'PUT', json: {password}})
+          .then(() => showStatus(status, true, `Password reset for ${user.username}`))
+          .catch(e => showStatus(status, false, e.message));
+      });
+      actionButton(actions, 'Delete', () => {
+        if (!confirm(`Delete user ${user.username}?`)) return;
+        apiFetch(`/api/auth/users/${encodeURIComponent(user.username)}`, {method: 'DELETE'})
+          .then(() => { showStatus(status, true, `Deleted ${user.username}`); loadUsers(); })
+          .catch(e => showStatus(status, false, e.message));
+      });
+      body.appendChild(row);
+    });
+  }).catch(e => showStatus(status, false, e.message));
+}
+
+document.getElementById('user-form').addEventListener('submit', e => {
+  e.preventDefault();
+  const status = document.getElementById('users-status');
+  const payload = {
+    username: document.getElementById('new-username').value,
+    password: document.getElementById('new-password').value,
+    role: document.getElementById('new-role').value,
+  };
+  apiFetch('/api/auth/users', {json: payload})
+    .then(() => { showStatus(status, true, `Added ${payload.username}`); e.target.reset(); loadUsers(); })
+    .catch(err => showStatus(status, false, err.message));
+});
+
+function readLdapForm() {
+  const settings = {};
+  document.querySelectorAll('#ldap-form [data-key]').forEach(el => {
+    if (el.type === 'checkbox') settings[el.dataset.key] = el.checked;
+    else if (el.type === 'number') settings[el.dataset.key] = Number(el.value);
+    else settings[el.dataset.key] = el.value;
+  });
+  return settings;
+}
+
+function fillLdapForm(settings) {
+  document.querySelectorAll('#ldap-form [data-key]').forEach(el => {
+    const value = settings[el.dataset.key];
+    if (el.type === 'checkbox') el.checked = !!value;
+    else el.value = value ?? '';
+  });
+}
+
+document.getElementById('ldap-form').addEventListener('submit', e => {
+  e.preventDefault();
+  const status = document.getElementById('ldap-status');
+  apiFetch('/api/auth/ldap', {method: 'PUT', json: readLdapForm()})
+    .then(settings => { fillLdapForm(settings); showStatus(status, true, 'LDAP settings saved'); })
+    .catch(err => showStatus(status, false, err.message));
+});
+
+document.getElementById('ldap-test-form').addEventListener('submit', e => {
+  e.preventDefault();
+  const output = document.getElementById('ldap-test-output');
+  const status = document.getElementById('ldap-status');
+  const payload = {
+    settings: readLdapForm(),
+    username: document.getElementById('ldap-test-username').value,
+    password: document.getElementById('ldap-test-password').value,
+  };
+  apiFetch('/api/auth/ldap/test', {json: payload})
+    .then(data => {
+      output.style.display = 'block';
+      output.textContent = data.output + (data.error ? `\n\nError: ${data.error}` : '');
+      showStatus(status, !data.error, data.error ? 'LDAP test failed' : `LDAP test ok: role ${data.role}`);
+    })
+    .catch(err => showStatus(status, false, err.message));
+});
+
+function loadTokens() {
+  const status = document.getElementById('tokens-status');
+  apiFetch('/api/auth/tokens').then(tokens => {
+    const body = document.getElementById('tokens-body');
+    body.innerHTML = '';
+    tokens.forEach(token => {
+      const row = document.createElement('tr');
+      cell(row, token.name);
+      cell(row, token.role);
+      cell(row, formatTime(token.created_at));
+      cell(row, formatTime(token.last_used_at));
+      const actions = cell(row, '');
+      actions.className = 'row-actions';
+      actionButton(actions, 'Revoke', () => {
+        if (!confirm(`Revoke token ${token.name}? Anything using it will stop working.`)) return;
+        apiFetch(`/api/auth/tokens/${token.id}`, {method: 'DELETE'})
+          .then(() => { showStatus(status, true, `Revoked ${token.name}`); loadTokens(); })
+          .catch(e => showStatus(status, false, e.message));
+      });
+      body.appendChild(row);
+    });
+  }).catch(e => showStatus(status, false, e.message));
+}
+
+document.getElementById('token-form').addEventListener('submit', e => {
+  e.preventDefault();
+  const status = document.getElementById('tokens-status');
+  const payload = {name: document.getElementById('token-name').value, role: document.getElementById('token-role').value};
+  apiFetch('/api/auth/tokens', {json: payload})
+    .then(data => {
+      const output = document.getElementById('token-output');
+      output.style.display = 'block';
+      output.textContent = data.token;
+      showStatus(status, true, `Created ${data.name}. Copy the token below now; it will not be shown again.`);
+      e.target.reset();
+      loadTokens();
+    })
+    .catch(err => showStatus(status, false, err.message));
+});
+
+loadUsers();
+apiFetch('/api/auth/ldap').then(fillLdapForm).catch(e => showStatus(document.getElementById('ldap-status'), false, e.message));
+loadTokens();
+</script>
+{% endblock %}

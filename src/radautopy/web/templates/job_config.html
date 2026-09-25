@@ -2,7 +2,9 @@
 {% block title %}{% if is_new %}New Job{% else %}{{ filename }}{% endif %} - radautopy{% endblock %}
 {% block content %}
 <h1>{% if is_new %}New Job{% else %}{{ filename }}{% endif %}</h1>
+{% if read_only %}<p class="status warn">Read-only view: your account has the viewer role. Secrets are masked.</p>{% endif %}
 
+{% if not read_only %}
 <details>
   <summary>Quick Filemap Generator</summary>
   <div class="field-form">
@@ -44,6 +46,7 @@
     <button type="button" onclick="generateFilemap()">Generate Filemap Tracks</button>
   </div>
 </details>
+{% endif %}
 
 <form class="field-form" id="edit-form">
   <fieldset>
@@ -184,8 +187,10 @@
     <button type="button" onclick="addFilemapTrack()">Add Track</button>
   </fieldset>
 
+  {% if not read_only %}
   <button type="submit">{% if is_new %}Create{% else %}Save{% endif %}</button>
-  {% if not is_new %}
+  {% endif %}
+  {% if not is_new and not read_only %}
   <button type="button" onclick="runJob()">Run</button>
   <button type="button" onclick="validateJob()">Validate</button>
   <button type="button" onclick="deleteJob()">Delete</button>
@@ -207,6 +212,9 @@ const typeKeyMap = {{ type_key_map | tojson }};
 const isNew = {{ is_new | tojson }};
 
 renderFilemapTracks({{ config.filemap | tojson }});
+if ({{ read_only | tojson }}) {
+  document.querySelectorAll('#edit-form input, #edit-form select, #edit-form textarea, #edit-form button').forEach(el => el.disabled = true);
+}
 
 function toggleEmailOverride(key) {
   const checkbox = document.querySelector(`.eo-enable[data-key="${key}"]`);

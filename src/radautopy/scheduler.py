@@ -1,4 +1,5 @@
 import logging
+import os
 import shlex
 import subprocess
 
@@ -46,7 +47,8 @@ def _run_job(config_name: str, job_runner: str, extra_args: str) -> None:
     try:
         command = [radautopy_executable(), config_name, job_runner, *args]
         logger.info(f"running {' '.join(command)}")
-        result = subprocess.run(command, capture_output=True, text=True)
+        env = {**os.environ, "RADAUTOPY_TRIGGER": "scheduled"}
+        result = subprocess.run(command, capture_output=True, text=True, env=env)
     except Exception:
         logger.exception(f"{config_name} could not be started")
         return

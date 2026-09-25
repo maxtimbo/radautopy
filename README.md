@@ -48,7 +48,7 @@ Docker and Docker Compose.
 
     With this mount, a job would use `"export_dir": "/export"`.
 
-5. Copy `.env.sample` to `.env` and set `RCLONE_GUI_PASS` (and optionally `RCLONE_GUI_USER`, which defaults to `admin`). Compose refuses to start until the password is set. See [Timezone](#timezone) for the optional `TZ` setting.
+5. Copy `.env.sample` to `.env` and set `RADAUTOPY_ADMIN_PASSWORD` (the web UI's `admin` login) and `RCLONE_GUI_PASS` (and optionally `RCLONE_GUI_USER`, which defaults to `admin`). Compose refuses to start until both passwords are set. See [Timezone](#timezone) for the optional `TZ` setting.
 
 6. Build and start:
 
@@ -69,7 +69,17 @@ Docker and Docker Compose.
 All three must be reachable from your browser. If you change the host side of the rclone ports (for example `"9000:5522"`), also set `RCLONE_GUI_PORT` and `RCLONE_API_PORT` under the `web` service's `environment` so the **rclone Remotes** page points to the right place.
 
 > [!WARNING]
-> The web UI has no login, and all passwords are stored in plain text. The **rclone Remotes** page logs straight into the rclone GUI, which can read everything under `/data`. Only expose these ports on a trusted network.
+> Job and email passwords are stored in plain text in `/data/radautopy.db`. The rclone GUI on ports 5522/5533 is protected only by its own `RCLONE_GUI_USER`/`RCLONE_GUI_PASS` login and can read everything under `/data`. Put the web UI behind HTTPS (a reverse proxy) before exposing it beyond a trusted network.
+
+#### Logins and Users
+
+The web UI requires a login. The built-in `admin` user's password is `RADAUTOPY_ADMIN_PASSWORD`. It always works, even when LDAP is unreachable, so keep it as a break-glass account. On the **Settings** page an admin can:
+
+- add local users with the `admin` or `viewer` role. Viewers can see jobs, run history and logs, and view job settings with passwords masked. They can't change, run or delete anything.
+- connect to LDAP or Active Directory. radautopy binds with a service account, finds the user with the search base and filter, checks the password by binding as that user, then picks the role from group membership: members of the admin group get `admin`, members of the viewer group get `viewer`, and everyone else is refused. If the viewer group is left blank, any directory user can log in as a viewer. Use **Test LDAP login** to check the settings step by step before saving them. A local user with the same name as an LDAP user takes precedence.
+- create API tokens for other systems (for example rust-radio). Send them as `Authorization: Bearer <token>`. A token is shown once, when it's created, and can be revoked at any time.
+
+Sessions last 7 days, and changing a local user's role or password logs them out. An LDAP user's role is checked at login, so a group change takes effect the next time they log in. Behind a reverse proxy, set `FORWARDED_ALLOW_IPS` on the `web` service to the proxy's address so the session cookie gets the `Secure` flag on HTTPS.
 
 #### Timezone
 
